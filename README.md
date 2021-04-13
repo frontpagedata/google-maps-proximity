@@ -3,7 +3,9 @@
 ## Overview
 Google relies on user proximity to provide local results for keywords. How strong is the proximity factor? How fast does the ranking decrease by distance from the location of a business?
 
-We will test this with personal injury lawyers in major US cities. The outcomes of the study will be to estimate the drop in the rankings by geographical distance and estimate the variability due to the local context. 
+We will test this with personal injury lawyers in major US cities. The outcomes of the study will be to estimate the drop in the rankings by geographical distance and estimate the variability due to the local context.   
+
+Our aim is to be able to compute the average drop in local Google rankings by distance (e.g. -2 positions/mile) and the variance of these measurements between major US cities.  
 
 ## Documentation and Project Infrastructure
 * [Roadmap](https://docs.google.com/document/d/1nlwztMcTNi2LD8LerAOW1_TxWbnbKNyBqOFI_nDLcIY/edit?usp=sharing)
