@@ -1,3 +1,18 @@
+# Google Maps Proximity Study for Rankings.io
+
+## Overview
+Google relies on user proximity to provide local results for keywords. How strong is the proximity factor? How fast does the ranking decrease by distance from the location of a business?
+
+We will test this with personal injury lawyers in major US cities. The outcomes of the study will be to estimate the drop in the rankings by geographical distance and estimate the variability due to the local context. 
+
+## Documentation and Project Infrastructure
+* [Roadmap](https://docs.google.com/document/d/1nlwztMcTNi2LD8LerAOW1_TxWbnbKNyBqOFI_nDLcIY/edit?usp=sharing)
+* [Study Plan](https://docs.google.com/spreadsheets/d/1KCDf10VUDOEMKvIobbgmAJub0w1ETslf4oVmrzS8wQQ/edit?usp=sharing)
+* [Results(LocalFalcon Scans)](https://drive.google.com/drive/folders/1LL4prLXtapYFXVvw7kgBnqBpzoU3t0lj?usp=sharing)
+
+------------------------------------------------------------------------
+------------------------------------------------------------------------
+
 # SOP Data Analysis and Project Template
 
 Last updated: 18.12.2020
