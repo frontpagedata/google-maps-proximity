@@ -1,6 +1,6 @@
 ---
-title: "[Add study name]"
-author: ""
+title: "google-maps-proximity"
+author: "François"
 date: "Last updated on `r Sys.Date()`"
 output:
   html_document:
@@ -17,32 +17,32 @@ editor_options:
 
 <style>
 .list-group-item.active, .list-group-item.active:hover, .list-group-item.active:focus {
-  background-color: #00d188;
-  border-color: #00d188;
+background-color: #00d188;
+border-color: #00d188;
 }
 
 body {
-  font-family: montserrat;
-  color: #444444;
-  font-size: 14px;
+font-family: montserrat;
+color: #444444;
+font-size: 14px;
 }
 
 h1 {
-  font-weight: bold;
-  font-size: 28px;
+font-weight: bold;
+font-size: 28px;
 }
 
 h1.title {
-  font-size: 30px;
-  color: #00d188;
+font-size: 30px;
+color: #00d188;
 }
 
 h2 {
-  font-size: 24px;
+font-size: 24px;
 }
 
 h3 {
-  font-size: 18px;
+font-size: 18px;
 }
 </style>
 
@@ -55,7 +55,9 @@ knitr::knit_hooks$set(inline = function(x) {
 })
 
 Sys.setlocale("LC_TIME", "C")
-extrafont::loadfonts(device = "win")
+# extrafont::loadfonts(device = "win")
+extrafont::loadfonts()
+
 ```
 
 
@@ -66,12 +68,12 @@ extrafont::loadfonts(device = "win")
 required_packages <- c("tidyverse", "readxl", "ggthemes", "hrbrthemes", "extrafont", "plotly", "scales", "stringr", "gganimate", "here", "tidytext", "sentimentr", "scales", "DT", "here", "sm", "mblm", "glue", "fs", "knitr", "rmdformats", "janitor", "urltools", "colorspace", "pdftools", "showtext")
 
 for(i in required_packages) { 
-if(!require(i, character.only = T)) {
-
-  #  if package is not existing, install then load the package
-install.packages(i, dependencies = T)
-require(i, character.only = T)
-}
+  if(!require(i, character.only = T)) {
+    
+    #  if package is not existing, install then load the package
+    install.packages(i, dependencies = T)
+    require(i, character.only = T)
+  }
 }
 
 
@@ -205,7 +207,6 @@ colfunc <- colorRampPalette(c(bl_col, "#bce2d5"))
 pos_cols <- colfunc(10)
 ```
 
-# load data
 
 
 
@@ -213,17 +214,29 @@ pos_cols <- colfunc(10)
 
 # 1 saving plots in pdf with example
 
-ggplot(data = mpg, mapping = aes(x = displ, y = hwy, color= drv)) + 
-     geom_smooth(mapping = aes(linetype = drv), method = 'loess') +
-     geom_point()
+default_example <- ggplot(data = mpg, mapping = aes(x = displ, y = hwy, color= drv)) + 
+  geom_smooth(mapping = aes(linetype = drv), method = 'loess') +
+  geom_point()
+# default_example
 
 if(save == T){ 
-  ggsave(here::here("plots", "name_plot.pdf"), name_plot, 
+  ggsave(here::here("plots", "default_example.pdf"), default_example, 
          width = 12.5, height = 8, device = cairo_pdf)
 }
 
 # 2 pdfs will then be converted into the pngs using the 04_convert_pdfs_to_pngs.rmd file. 
 ```
+
+
+
+# load data
+
+
+
+
+
+
+
 
 
 
