@@ -53,6 +53,7 @@ for (i in 1:n_sheets_to_download){
                                # class = "tibble",
                                skip = 9) %>% # skip the first useless rows
     select(`Your Rank`, Latitude, Longitude)
+  # not sure why not working anymore... alternative: read.csv. seems to be auth issue (error 403)
   print("data extracted")
   
   # then download the result locally
@@ -79,7 +80,41 @@ We read all the .csv of the scans/samples, compute the distance to the center, a
 
 ```{r}
 
-rio::import("../raw_data/scans/")
+all_files <- list.files(path = "../raw_data/scans/")
+counter = 1
+all_samples_list = list()
+for (file in all_files){
+  sample_name = stringr::str_extract(file, '.*(?=\\.csv)')
+  print(sample_name)
+  sample = rio::import(glue::glue("../raw_data/scans/{sample_name}.csv"))
+  origin_lat = sample[113,]$Latitude
+  origin_lon = sample[113,]$Longitude
+  sample <- sample %>% 
+    mutate(
+      geodist = as.numeric(round(geodist::geodist_vec(Latitude, Longitude, origin_lat, origin_lon)/1000, 1)), # /1000 for km
+      rank = case_when(
+        `Your Rank` == "20+" ~ 21,
+        TRUE ~ as.numeric(as.character(`Your Rank`))
+      ),
+      city_sample = sample_name
+    ) %>%  
+    select(city_sample, rank, geodist, Latitude, Longitude)
+  
+  all_samples_list[[counter]] <- sample
+  counter = counter + 1
+  
+}
+
+# we have all the samples in a list, now we need to combine them in a single tibble:
+# (see https://stackoverflow.com/questions/29402528/append-data-frames-together-in-a-for-loop/29419402)
+all_samples = do.call(rbind, all_samples_list) %>%
+  separate(city_sample, into = c("City", "Sample"), sep = "_")
+
+# we save a tidy tibble in long format with all the samples for the scans
+# it should contain all what we need for the analyses.
+rio::export(all_samples, "../proc_data/samples_10_10.csv")
+rio::export(all_samples, "../proc_data/samples_10_10.rds")
+
 
 ```
 
