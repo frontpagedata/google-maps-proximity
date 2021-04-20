@@ -22,7 +22,7 @@ border-color: #00d188;
 }
 
 body {
-font-family: montserrat;
+font-family: FiraSans-Regular;
 color: #444444;
 font-size: 14px;
 }
@@ -65,7 +65,10 @@ extrafont::loadfonts()
 ```{r prep}
 ## packages: remove or add your necessary packages
 
-required_packages <- c("tidyverse", "readxl", "ggthemes", "hrbrthemes", "extrafont", "plotly", "scales", "stringr", "gganimate", "here", "tidytext", "sentimentr", "scales", "DT", "here", "sm", "mblm", "glue", "fs", "knitr", "rmdformats", "janitor", "urltools", "colorspace", "pdftools", "showtext")
+# required_packages <- c("tidyverse", "readxl", "ggthemes", "hrbrthemes", "extrafont", "plotly", "scales", "stringr", "gganimate", "here", "tidytext", "sentimentr", "scales", "DT", "here", "sm", "mblm", "glue", "fs", "knitr", "rmdformats", "janitor", "urltools", "colorspace", "pdftools", "showtext")
+
+required_packages <- c("tidyverse", "extrafont", "here", "colorspace", "pdftools")
+
 
 for(i in required_packages) { 
   if(!require(i, character.only = T)) {
@@ -94,7 +97,7 @@ dpi <- 750
 
 ## theme updates; please adjust to client´s website
 #theme_set(ggthemes::theme_clean(base_size = 15))
-theme_set(ggthemes::theme_clean(base_size = 15, base_family = "Montserrat"))
+theme_set(ggthemes::theme_clean(base_size = 15, base_family = "FiraSans-Regular"))
 
 
 theme_update(plot.margin = margin(30, 30, 30, 30),
@@ -231,10 +234,146 @@ if(save == T){
 
 # load data
 
+```{r}
+
+samples <- rio::import(here::here("proc_data", "samples_10_10.rds")) %>%
+  mutate(
+    geodist_miles = round(geodist * 0.62137119224, 2), # the distance in American miles instead of km
+    drop = -drop
+  )
 
 
+```
 
 
+# initial data exploration
+
+
+```{r}
+
+# just a test with Atlanta:
+# atlanta <- samples %>% 
+#   filter(City == "Atlanta")
+# atlanta_avg <- atlanta %>%
+#   group_by(geodist) %>%
+#   summarise(avg_drop = mean(drop),
+#             med_drop = median(drop))
+# ggplot(data = atlanta) +
+#   geom_point(mapping = aes(x = geodist, y = drop)) + 
+#   geom_smooth(mapping = aes(x = geodist, y = drop), method = "lm", formula = y ~ log(x+0.00000000000001)) +
+#   geom_point(data = atlanta_avg, mapping = aes(x = geodist, y = avg_drop), color = "red")
+
+# library(zoo)
+# 
+# samples_avg <- samples %>%
+#   mutate(
+#     test = case_when(
+#       geodist_miles == 0 ~ 0,
+#       (0 < geodist_miles) & (geodist_miles <= 1) ~ 1,
+#       (1 < geodist_miles) & (geodist_miles <= 2) ~ 2,
+#       (2 < geodist_miles) & (geodist_miles <= 3) ~ 3,
+#       (3 < geodist_miles) & (geodist_miles <= 4) ~ 4,
+#       (4 < geodist_miles) & (geodist_miles <= 5) ~ 5,
+#       (5 < geodist_miles) & (geodist_miles <= 6) ~ 6,
+#       (6 < geodist_miles) & (geodist_miles <= 7) ~ 7,
+#       geodist_miles > 7 ~ 8,
+#       TRUE ~ 100 # geodist_miles
+#     ),
+#     rough_geodist = ifelse(geodist_miles == 0, 0, cut(geodist_miles, 8))
+#   ) %>%
+#   group_by(City, rough_geodist) %>%
+#   summarise(avg_drop = mean(drop),
+#             med_drop = median(drop),
+#             n_samples = n()) %>%
+#   ungroup()
+# 
+# 
+# 
+# # compute rolling average of the drop:
+# samples <- samples %>% 
+#   mutate(
+#     drop_1mile = zoo::rollmean(drop, k = 1, fill = NA, align = "left"),
+#     drop_2mile = zoo::rollmean(drop, k = 2, fill = NA, align = "left"),
+#     drop_3mile = zoo::rollmean(drop, k = 100, fill = NA, align = "left")
+#   )
+# 
+# ggplot(data = samples) +
+#   geom_point(mapping = aes(x = geodist_miles, y = drop), alpha = 0.1) + 
+#   facet_wrap(vars(City), ncol = 5) + 
+#   scale_y_reverse() + 
+#   geom_point(data = samples_avg, mapping = aes(x = rough_geodist, y = avg_drop), color = "red", alpha = 0.5) +
+#   geom_line(data = samples_avg, mapping = aes(x = rough_geodist, y = avg_drop), color = "red", alpha = 0.5) +
+#   # geom_ma(data = samples, mapping = aes(x = geodist_miles, y = drop), ma_fun = SMA, n = 2, color = "blue") +
+#   # geom_line(data = samples, mapping = aes(x = geodist_miles, y = drop_3mile), color = "blue") +
+#   # geom_smooth(data = samples, mapping = aes(x = geodist_miles, y = drop), method = "loess")
+#   labs(
+#     title = "The average drop in position",
+#     subtitle = "It varies a lot between cities and law firms"
+#   ) +
+#   xlab("Distance in Miles to the location of the law firm") +
+#   ylab("Drop in the ranking")
+# 
+# # geom_smooth(mapping = aes(x = geodist, y = drop), method = "loess") + # not super useful
+# # geom_point(data = samples_avg, mapping = aes(x = geodist, y = med_drop), color = "blue") + # too confusing to keep, and not particularly different to the mean.
+
+
+samples_avg <- samples %>%
+  mutate(
+    rough_geodist = cut(geodist_miles, breaks = c(0,1,2,3,4,5,6,7,8), labels = FALSE), # bin by mile 
+    rough_geodist = ifelse(is.na(rough_geodist), 0, rough_geodist) # the bin 0 is 0 instead of NA
+  ) %>%
+  group_by(City, rough_geodist) %>%
+  summarise(avg_drop = mean(drop),
+            n_samples = n()) %>%
+  ungroup()
+
+
+ggplot(data = samples_avg, mapping = aes(x = rough_geodist, y = avg_drop, group = 1)) +
+  geom_point() +
+  geom_line() +
+  facet_wrap(vars(City), ncol = 5) + 
+  scale_y_continuous(breaks = seq(0,-15) ) + 
+  scale_x_continuous(breaks = seq(0,8), minor_breaks = NULL) + 
+  labs(
+    title = "The average drop in position",
+    subtitle = "Drops dramatically in the first mile and quickly stabilizes. Distance are binned by mile."
+  ) +
+  xlab("Distance in Miles to the location of the law firm") +
+  ylab("Drop in the ranking") 
+
+```
+
+
+Let's have a look at all the samples in a city:  
+
+```{r}
+
+samples_avg_all <- samples %>%
+  mutate(
+    rough_geodist = cut(geodist_miles, breaks = c(0,1,2,3,4,5,6,7,8), labels = FALSE), # bin by mile 
+    rough_geodist = ifelse(is.na(rough_geodist), 0, rough_geodist) # the bin 0 is 0 instead of NA
+  ) %>%
+  group_by(City, Sample, rough_geodist) %>%
+  summarise(avg_drop = mean(drop),
+            n_samples = n()) %>%
+  ungroup()
+
+ggplot(data = samples_avg_all, mapping = aes(x = rough_geodist, y = avg_drop, group = Sample)) +
+  # geom_point(alpha = 0.2) +
+  geom_line(alpha = 0.4) +
+  geom_line(data = samples_avg, mapping = aes(x = rough_geodist, y = avg_drop, group = 1), size = 1.2) +
+  facet_wrap(vars(City), ncol = 5) + 
+  # scale_y_continuous(breaks = seq(0,-15) ) + 
+  scale_x_continuous(breaks = seq(0,8), minor_breaks = NULL) + 
+  labs(
+    title = "The average drop in position",
+    subtitle = "Whereas most of the law firms see a drop in the first mile, the magnitude of the drop varies greatly. The average is in black."
+  ) +
+  xlab("Distance in Miles to the location of the law firm") +
+  ylab("Drop in the ranking") 
+
+
+```
 
 
 

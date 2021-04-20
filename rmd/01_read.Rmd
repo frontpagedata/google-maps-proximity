@@ -65,9 +65,9 @@ for (i in 1:n_sheets_to_download){
   } else {
     n_sample = 1
   }
-  n_sample = stringr::str_pad(as.character(n_sample), 2, side = "left", pad = "0") # consistent name, better ordering
-  print(n_sample)
-  rio::export(current_sheet, glue::glue("../raw_data/scans/{current_city}_{n_sample}.csv"))
+  padded_n_sample = stringr::str_pad(as.character(n_sample), 2, side = "left", pad = "0") # consistent name, better ordering
+  print(current_city, padded_n_sample)
+  rio::export(current_sheet, glue::glue("../raw_data/scans/{current_city}_{padded_n_sample}.csv"))
   previous_city = current_city # re-initialize sample counter
 }
 ```
@@ -89,16 +89,25 @@ for (file in all_files){
   sample = rio::import(glue::glue("../raw_data/scans/{sample_name}.csv"))
   origin_lat = sample[113,]$Latitude
   origin_lon = sample[113,]$Longitude
+  origin_rank = case_when(
+        sample[113,]$`Your Rank` == "20+" ~ 21,
+        TRUE ~ as.numeric(as.character(sample[113,]$`Your Rank`))
+      )
+  # print(origin_rank)
   sample <- sample %>% 
     mutate(
-      geodist = as.numeric(round(geodist::geodist_vec(Latitude, Longitude, origin_lat, origin_lon)/1000, 1)), # /1000 for km
+      geodist = as.numeric(round(geodist::geodist_vec(Latitude, Longitude, origin_lat, origin_lon)/1000, 3)), # /1000 for km
       rank = case_when(
         `Your Rank` == "20+" ~ 21,
         TRUE ~ as.numeric(as.character(`Your Rank`))
       ),
       city_sample = sample_name
-    ) %>%  
-    select(city_sample, rank, geodist, Latitude, Longitude)
+    ) %>%
+    rowwise() %>%
+    mutate(drop = rank - origin_rank) %>% # drop to the origin rank
+    ungroup() %>%
+    select(city_sample, drop, geodist, rank, Latitude, Longitude)
+  print(paste("origin: ", origin_rank, " , rank: ", sample[113,]$rank, ", drop: ", sample[113,]$drop))
   
   all_samples_list[[counter]] <- sample
   counter = counter + 1
