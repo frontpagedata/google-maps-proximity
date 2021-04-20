@@ -321,7 +321,7 @@ average_drop <- ggplot(data = samples_avg, mapping = aes(x = rough_geodist, y = 
   scale_x_continuous(breaks = seq(0,max(samples_avg$rough_geodist)), minor_breaks = NULL) + 
   labs(
     title = "The average drop in position",
-    subtitle = "The ranking drops dramatically in the first mile and quickly stabilizes. Distance are binned by mile."
+    subtitle = "The ranking drops dramatically in the first mile and quickly stabilizes. Distances are binned by mile."
   ) +
   xlab("Distance in miles to the location of the law firm") +
   ylab("Drop in the ranking (indexed at 0)") 
@@ -388,7 +388,7 @@ average_rank_all_samples <- ggplot(data = samples_avg_all,
   scale_x_continuous(breaks = seq(0,max(samples_avg_all$rough_geodist)), minor_breaks = NULL) + 
   labs(
     title = "The rank by distance of each law firm",
-    subtitle = "The ranking of the drop varies greatly between law firms; The highest ranking firms drop much less. \nEach grey line is a sample (a law firm), and their average is in black. A rank of 21 means '+20': out of the top 20."
+    subtitle = "The magnitude of the drop varies greatly between law firms: the highest ranking firms drop much less. \nEach grey line is a sample (a law firm), and their average is in black. A rank of 21 means '+20': out of the top 20."
   ) +
   xlab("Distance in miles to the location of the law firm") +
   ylab("Ranking (average, binned by mile)") 
