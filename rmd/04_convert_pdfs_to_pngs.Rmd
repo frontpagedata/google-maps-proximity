@@ -9,12 +9,12 @@ output: html_document
 ```{r prep}
 set.seed(2)
 
-required_packages <- c("tidyverse", "magrittr", "DBI", "bigrquery", "arrow","glue", "vroom","janitor", "gt", "ggwordcloud", "readxl", "ggthemes", "hrbrthemes", "extrafont", "plotly", "scales", "stringr", "gganimate", "here", "tidytext", "sentimentr", "scales", "DT", "here", "sm", "mblm", "glue", "fs", "knitr", "rmdformats", "janitor", "urltools", "colorspace", "pdftools", "showtext", "pander", "ggridges", "spatstat", "broom")
+required_packages <- c("tidyverse", "pdftools")
 for(i in required_packages) { 
   if(!require(i, character.only = T)) {
     #  if package is not existing, install then load the package
     install.packages(i, dependencies = T)
-  require(i, character.only = T)
+    require(i, character.only = T)
   }
 }
 ```
@@ -22,14 +22,14 @@ for(i in required_packages) {
 
 
 ```{r convert-pdf-to-png, echo = F}
-pdfs <- list.files(here("plots"), pattern = "*.pdf")
-                                      setwd(here("plots", "png"))
+pdfs <- list.files(here::here("plots"), pattern = "*.pdf")
+# setwd(here("plots", "png"))
 for(pdf in pdfs) {
-  pdf_convert(pdf = here("plots", pdf),
+  pdf_convert(pdf = here::here("plots", pdf),
               format = "png", dpi = 720)
 }
 # pdf <- "3_1_jobs_cat2.pdf"
-pdf_convert(pdf = here("plots", "5_1_require_edu_size_n.pdf"),  format = "png", dpi = 720)
+# pdf_convert(pdf = here("plots", "5_1_require_edu_size_n.pdf"),  format = "png", dpi = 720)
 ```
 
 

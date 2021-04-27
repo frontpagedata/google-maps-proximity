@@ -67,51 +67,6 @@ for (i in 1:n_sheets_to_download){
 ```
 
 
-
-
-```{r}
-
-# try to read all the sheets and save them as .csv
-n_sheets_to_download = dim(study_plan)[1]
-previous_city = "Nope!" # used to count number of sample by city
-for (i in 1:n_sheets_to_download){
-  current_sheet_link = study_plan[i,]$Link
-  # print(current_sheet_link)
-  # the .csv extracted are not saved as Google Sheets, but just csv
-  # thus we cannot use googlesheets4 to read them.
-  # we extract their Google ID
-  current_sheet_link = stringr::str_replace(current_sheet_link, "https://drive.google.com/file/d/", "")
-  current_google_id = stringr::str_replace(current_sheet_link, "/view\\?usp=sharing", "")
-  # print(glue::glue("https://docs.google.com/uc?id={current_google_id}&export=download"))
-  # then use it to get the csv
-  # source of trick: https://stackoverflow.com/questions/33135060/read-csv-file-hosted-on-google-drive
-  current_sheet <- rio::import(glue::glue("https://docs.google.com/uc?id={current_google_id}&export=download"),
-                               format = "csv",
-                               # sep = ", ",
-                               # header = TRUE,
-                               # class = "tibble",
-                               skip = 9) %>% # skip the first useless rows
-    select(`Your Rank`, Latitude, Longitude)
-  # not sure why not working anymore... alternative: read.csv. seems to be auth issue (error 403)
-  print("data extracted")
-  
-  # then download the result locally
-  current_city = stringr::str_replace_all(study_plan[i,]$City, " ", "-" ) # add city in filename
-  # we could also add the law firm, but probably not useful. 
-  # We add a sample number by city:
-  if (previous_city == current_city){
-    n_sample = n_sample + 1
-  } else {
-    n_sample = 1
-  }
-  padded_n_sample = stringr::str_pad(as.character(n_sample), 2, side = "left", pad = "0") # consistent name, better ordering
-  print(current_city, padded_n_sample)
-  rio::export(current_sheet, glue::glue("../raw_data/scans/{current_city}_{padded_n_sample}.csv"))
-  previous_city = current_city # re-initialize sample counter
-}
-```
-
-
 ## Reshape Data
 
 We read all the .csv of the scans/samples, compute the distance to the center, and store everything in long format in a single tidy tibble.  
@@ -128,6 +83,7 @@ for (file in all_files){
   # read sheet
   sample = rio::import(
     here::here("raw_data/raw_scans", glue::glue("{sample_name}.csv")),
+    fill = TRUE, # avoid error with LA sample 12, fill empty col with NAs
     format = "csv",
     skip = 9) %>% # skip the first useless rows
     select(`Your Rank`, Latitude, Longitude) # select only the columns we need
