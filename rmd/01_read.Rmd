@@ -8,10 +8,10 @@ output: html_document
 
 # setup
 library(tidyverse) # makes life easier
-library(googlesheets4) # R interface to Google Sheets
+library(googlesheets4) # R interface to Google Sheets (to read study plan)
+library(googledrive) # to download all .csv
+library(here)
 library(geodist) # Compute distance between 2 coordinates
-
-
 
 ```
 
@@ -28,6 +28,45 @@ study_plan <- googlesheets4::read_sheet(
 rio::export(study_plan, "../raw_data/study_plan.csv")
 
 ```
+
+```{r}
+
+# read all the csv on the Drive and save them locally
+
+n_sheets_to_download = dim(study_plan)[1]
+previous_city = "init" # used to count number of sample by city
+for (i in 1:n_sheets_to_download){
+  current_sheet_link = study_plan[i,]$Link
+  # print(current_sheet_link)
+  
+  # some info to rename the downloaded sample:
+  current_city = stringr::str_replace_all(study_plan[i,]$City, " ", "-" ) # add city in filename
+  # we could also add the law firm, but probably not useful. 
+  # We add a sample number by city:
+  if (previous_city == current_city){
+    n_sample = n_sample + 1
+  } else {
+    n_sample = 1
+  }
+  # consistent name, for better ordering:
+  padded_n_sample = stringr::str_pad(as.character(n_sample), 2, side = "left", pad = "0") 
+  print(paste(current_city, padded_n_sample)) # where we are.
+  
+  # download the .csv locally:
+  drive_download(
+    file = current_sheet_link, 
+    path = here::here("raw_data/raw_scans",
+                      glue::glue("{current_city}_{padded_n_sample}.csv")),
+    overwrite = TRUE
+    )
+  
+  previous_city = current_city # re-initialize sample counter
+}
+
+
+```
+
+
 
 
 ```{r}
@@ -75,24 +114,30 @@ for (i in 1:n_sheets_to_download){
 
 ## Reshape Data
 
-We read all the .csv of the scans/samples, compute the distance to the center, and store everyting in long format in a single tidy tibble.  
+We read all the .csv of the scans/samples, compute the distance to the center, and store everything in long format in a single tidy tibble.  
 
 
 ```{r}
 
-all_files <- list.files(path = "../raw_data/scans/")
+all_files <- list.files(path = here::here("raw_data/raw_scans"))
 counter = 1
 all_samples_list = list()
 for (file in all_files){
   sample_name = stringr::str_extract(file, '.*(?=\\.csv)')
   print(sample_name)
-  sample = rio::import(glue::glue("../raw_data/scans/{sample_name}.csv"))
+  # read sheet
+  sample = rio::import(
+    here::here("raw_data/raw_scans", glue::glue("{sample_name}.csv")),
+    format = "csv",
+    skip = 9) %>% # skip the first useless rows
+    select(`Your Rank`, Latitude, Longitude) # select only the columns we need
+  
   origin_lat = sample[113,]$Latitude
   origin_lon = sample[113,]$Longitude
   origin_rank = case_when(
-        sample[113,]$`Your Rank` == "20+" ~ 21,
-        TRUE ~ as.numeric(as.character(sample[113,]$`Your Rank`))
-      )
+    sample[113,]$`Your Rank` == "20+" ~ 21,
+    TRUE ~ as.numeric(as.character(sample[113,]$`Your Rank`))
+  )
   # print(origin_rank)
   sample <- sample %>% 
     mutate(
@@ -121,8 +166,10 @@ all_samples = do.call(rbind, all_samples_list) %>%
 
 # we save a tidy tibble in long format with all the samples for the scans
 # it should contain all what we need for the analyses.
-rio::export(all_samples, "../proc_data/samples_10_10.csv")
-rio::export(all_samples, "../proc_data/samples_10_10.rds")
+# rio::export(all_samples, "../proc_data/samples_10_10.csv")
+# rio::export(all_samples, "../proc_data/samples_10_10.rds")
+rio::export(all_samples, here::here("proc_data", "samples_10cities_20samples.csv"))
+rio::export(all_samples, here::here("proc_data", "samples_10cities_20samples.rds"))
 
 
 ```
