@@ -1,12 +1,12 @@
 ---
-title: "google-maps-proximity"
-author: "François"
+title: "Google Maps Ranking - Proximity Study"
+author: "Preliminary Results, François"
 date: "Last updated on `r Sys.Date()`"
 output:
   html_document:
     theme: paper
     highlight: kate
-    code_folding: hide
+    # code_folding: hide
     toc: true
     toc_depth: 3
     toc_float: true
@@ -17,8 +17,8 @@ editor_options:
 
 <style>
 .list-group-item.active, .list-group-item.active:hover, .list-group-item.active:focus {
-background-color: #00d188;
-border-color: #00d188;
+background-color: #D21D5C;
+border-color: #D21D5C;
 }
 
 body {
@@ -34,7 +34,7 @@ font-size: 28px;
 
 h1.title {
 font-size: 30px;
-color: #00d188;
+color: #D21D5C;
 }
 
 h2 {
@@ -48,7 +48,10 @@ font-size: 18px;
 
 
 ```{r setup, include=FALSE}
-knitr::opts_chunk$set(warning = FALSE, message = FALSE, fig.showtext = TRUE, dpi = 700)
+knitr::opts_chunk$set(warning = FALSE, message = FALSE, 
+                      fig.showtext = TRUE, dpi = 700,
+                      echo = FALSE # hide code for now
+                      )
 
 knitr::knit_hooks$set(inline = function(x) {
   prettyNum(x, big.mark = ",", small.mark = ",", scientific = F)
@@ -59,7 +62,6 @@ Sys.setlocale("LC_TIME", "C")
 extrafont::loadfonts()
 
 ```
-
 
 
 ```{r prep}
@@ -210,11 +212,9 @@ pos_cols <- colfunc(10)
 ```
 
 
-
-# load data
-
 ```{r}
 
+# Load data
 samples <- rio::import(here::here("proc_data", "samples_10cities_20samples.rds")) %>%
   mutate(
     geodist_miles = round(geodist * 0.62137119224, 2), # the distance in American miles instead of km
@@ -225,15 +225,47 @@ samples <- rio::import(here::here("proc_data", "samples_10cities_20samples.rds")
 ```
 
 
-# initial visual exploration
+# Summary
 
+not sure if keeping this...  
+
+# Introduction
+
+Google relies on user proximity to provide local results for keywords. How strong is the proximity factor? How fast does the ranking decrease by distance from the location of a business?  
+
+The goals of the study are to try to estimate the drop in the ranking by geographical distance and to measure the variability due to the local context.
+
+## Methods
+
+For this study, we focused on personal injury lawyers in major US cities. We collected 20 top ranking personal injury lawyers in each of the 10 largest cities. 
+
+For each of these law firm, we used the service [Local Falcon](https://www.localfalcon.com/) to collect Google My Business rankings fpr listings that show up either in the Maps portion of the organic search, or from a search in the Google Maps Local Finder (i.e. Google Maps).
+
+We collected their rankings for the keyword _car accident lawyer_ at 225 locations on a 15x15 grid centered on their geographic location.  
+
+For 10 law firms, we used a radius of 5 miles, a finer granularity to better highlight the drop in ranking around the exact location of the firm. For 10 other law firms, we used a radius of 10 miles, to better identify the distance where most of the firms drop out of the top 20.  
+
+For each Localfalcon 
+
+
+at their geographical location and at 224 locations poritioned   
+
+
+ 
 
 ```{r}
+
+# DATA PROCESSING
+#   we need an easy way to plot the distance to origin for the plots.
+#   so, we bin the distance by mile, an compute the average rank in a bin.
+# we create 2 tibbles, one with an average by city
+# and another with an average by city and sample.
+
 # method: because the geo distance varies, and is not the EXACT same
 # btw cities and samples, we bin by mile to plot.
 
 # a tibble with an average by city
-samples_avg <- samples %>%
+avg_by_city <- samples %>%
   mutate(
     rough_geodist = cut(geodist_miles, breaks = seq(0, max(samples$geodist_miles)+1), labels = FALSE), # bin by m ile 
     rough_geodist = ifelse(is.na(rough_geodist), 0, rough_geodist) # the bin 0 is 0 instead of NA
@@ -250,8 +282,8 @@ samples_avg <- samples %>%
     percentage_out_of_top20 = (n_samples_out_of_top20 / n_samples)
     )
 
-# a tibble with an average by city an sample
-samples_avg_all <- samples %>%
+# a tibble with an average by city and sample
+avg_by_city_and_firm <- samples %>%
   mutate(
     rough_geodist = cut(geodist_miles, breaks = seq(0, max(samples$geodist_miles)+1), labels = FALSE), # bin by mile 
     rough_geodist = ifelse(is.na(rough_geodist), 0, rough_geodist) # the bin 0 is 0 instead of NA
@@ -275,16 +307,16 @@ Average drop by city:
 ```{r}
 
 
-average_drop <- ggplot(data = samples_avg, mapping = aes(x = rough_geodist, y = avg_drop, group = 1)) +
+average_drop <- ggplot(data = avg_by_city, mapping = aes(x = rough_geodist, y = avg_drop, group = 1)) +
   geom_point() +
   geom_line() +
   # geom_errorbar(aes(ymin = avg_drop - sd, ymax = avg_drop + sd)) + 
   facet_wrap(vars(City), ncol = 5) + 
   scale_y_continuous(
-    breaks = seq(0,round(min(samples_avg$avg_drop)), by = -2)
+    breaks = seq(0,round(min(avg_by_city$avg_drop)), by = -2)
   ) + 
   scale_x_continuous(
-    breaks = seq(0,max(samples_avg$rough_geodist), by = 2), 
+    breaks = seq(0,max(avg_by_city$rough_geodist), by = 2), 
     minor_breaks = NULL 
   ) + 
   labs(
@@ -324,14 +356,14 @@ Let's have a look at all the samples in each city:
 
 ```{r}
 
-average_drop_all_samples <- ggplot(data = samples_avg_all, mapping = aes(x = rough_geodist, y = avg_drop, group = Sample)) +
+average_drop_all_samples <- ggplot(data = avg_by_city_and_firm, mapping = aes(x = rough_geodist, y = avg_drop, group = Sample)) +
   # geom_point(alpha = 0.2) +
   geom_line(alpha = 0.4) +
-  geom_line(data = samples_avg, mapping = aes(x = rough_geodist, y = avg_drop, group = 1), size = 1.2) +
+  geom_line(data = avg_by_city, mapping = aes(x = rough_geodist, y = avg_drop, group = 1), size = 1.2) +
   facet_wrap(vars(City), ncol = 5) + 
   # scale_y_continuous(breaks = seq(0,-15) ) + 
   scale_x_continuous(
-    breaks = seq(0, max(samples_avg_all$rough_geodist), by = 2), 
+    breaks = seq(0, max(avg_by_city_and_firm$rough_geodist), by = 2), 
     minor_breaks = NULL) + 
   labs(
     title = "The drop in position for each law firm",
@@ -364,14 +396,14 @@ Let's have a look at their original rank. By doing so, we might be able to diffe
 
 ```{r}
 
-average_rank_all_samples <- ggplot(data = samples_avg_all, 
+average_rank_all_samples <- ggplot(data = avg_by_city_and_firm, 
                                    mapping = aes(x = rough_geodist, y = avg_rank, group = Sample)) +
   geom_line(alpha = 0.4) +
-  geom_line(data = samples_avg, mapping = aes(x = rough_geodist, y = avg_rank, group = 1), size = 1.2) +
+  geom_line(data = avg_by_city, mapping = aes(x = rough_geodist, y = avg_rank, group = 1), size = 1.2) +
   facet_wrap(vars(City), ncol = 5) + 
   scale_y_reverse() +
   scale_x_continuous(
-    breaks = seq(0,max(samples_avg_all$rough_geodist), by = 2), 
+    breaks = seq(0,max(avg_by_city_and_firm$rough_geodist), by = 2), 
     minor_breaks = NULL) + 
   labs(
     title = "The rank by distance for each law firm",
@@ -420,7 +452,7 @@ The average drop per mile (average for all cities):
 
 ```{r}
 
-drop_per_mile <- samples_avg %>% 
+drop_per_mile <- avg_by_city %>% 
   filter(rough_geodist != 0) %>%
   group_by(rough_geodist) %>% 
   mutate(drop_per_mile = avg_drop / rough_geodist) %>%
@@ -438,7 +470,7 @@ plot_drop_per_mile <- drop_per_mile %>%
     breaks = seq(0,round(min(drop_per_mile$`Average drop`)), by = -1)
   ) + 
   scale_x_continuous(
-    breaks = seq(0,max(samples_avg$rough_geodist), by = 2), 
+    breaks = seq(0,max(avg_by_city$rough_geodist), by = 2), 
     minor_breaks = NULL 
   ) + 
   labs(
@@ -472,20 +504,20 @@ Most of this drop is happening in the first mile(s).
 
 ```{r}
 
-samples_avg_all %>% 
+avg_by_city_and_firm %>% 
   filter(rough_geodist == 0) %>%
   ggplot(aes(x = avg_rank)) +
   geom_bar() +
   xlab("initial rank")
 
 # percentage of samples with initial rank == 1:
-perc_with_init_rank_one <- samples_avg_all %>% 
+perc_with_init_rank_one <- avg_by_city_and_firm %>% 
   filter(rough_geodist == 0) %>%
   count(avg_rank) %>%
   summarise(
     perc_with_init_rank_one = (
-      samples_avg_all %>% filter(rough_geodist == 0) %>% count(avg_rank) %>%
-        filter(avg_rank == 1) %>% .$n) / (samples_avg_all %>%
+      avg_by_city_and_firm %>% filter(rough_geodist == 0) %>% count(avg_rank) %>%
+        filter(avg_rank == 1) %>% .$n) / (avg_by_city_and_firm %>%
                                             filter(rough_geodist == 0) %>%
                                             count(avg_rank) %>%
                                             summarise(sum(n)) %>% .$`sum(n)`)
@@ -502,14 +534,14 @@ Important, as one aim of our client is to be able to know as from which distance
 
 ```{r}
 
-perc_out_of_top20 <- ggplot(data = samples_avg, mapping = aes(x = rough_geodist, y = percentage_out_of_top20, group = 1)) +
+perc_out_of_top20 <- ggplot(data = avg_by_city, mapping = aes(x = rough_geodist, y = percentage_out_of_top20, group = 1)) +
   geom_point() +
   geom_line() +
   geom_area(alpha = 0.4) + 
   facet_wrap(vars(City), ncol = 5) + 
   scale_y_continuous(labels = scales::percent) + 
   scale_x_continuous(
-    breaks = seq(0,max(samples_avg$rough_geodist), by = 2), 
+    breaks = seq(0,max(avg_by_city$rough_geodist), by = 2), 
     minor_breaks = NULL 
   ) + 
   labs(
@@ -548,10 +580,13 @@ knitr::include_graphics(
 
 # Draw the grid for each city
 
-Useful? We would be able to see the pattern/grid, and see the drop in 2D, not in 1D. We would see that the drop is not always the same in all the directions.  
-Issue: not same location for the firms, so cannot really draw an average grid per city.   
+Useful? We would be able to see the average pattern/grid, and see the drop in 2D, not in 1D. We would see that the drop is not always the same in all the directions.  
+Issue: not same location for the firms, so cannot really draw a localized average grid per city.   
 
 # what else would be useful?
 
-
+* the drop in function of your initial position? It seems that if you start low, you drop faster out of the top 20, and that only law firms who 
+* collect more data? (10 miles is already quite a lot. We can still collect 48 samples on a 15x15 grid.
+* start with top 10 analysis. 
+* show the result in a .Rmd file, like an academic paper (methodology etc.). Short. 
 
