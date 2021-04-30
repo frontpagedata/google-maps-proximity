@@ -100,7 +100,7 @@ dpi <- 750
 
 ## theme updates; please adjust to client´s website
 #theme_set(ggthemes::theme_clean(base_size = 15))
-theme_set(ggthemes::theme_clean(base_size = 15, base_family = "FiraSans-Regular"))
+theme_set(ggthemes::theme_clean(base_size = 12, base_family = "FiraSans-Regular"))
 
 
 theme_update(plot.margin = margin(30, 30, 30, 30),
@@ -112,6 +112,7 @@ theme_update(plot.margin = margin(30, 30, 30, 30),
                                        hjust = .5,
                                        margin = margin(10, 0, 25, 0)),
              plot.title.position = "plot",
+             plot.subtitle = element_text(size = 16),
              plot.caption = element_text(color = "grey40",
                                          size = 9,
                                          margin = margin(20, 0, -20, 0)),
@@ -162,6 +163,44 @@ theme_update(plot.margin = margin(30, 30, 30, 30),
              #legend.margin = margin(0, 0, 10, 0),
              strip.text = element_text(face = "bold",
                                        margin = margin(b = 10)))
+
+my_theme <- function(){
+  theme(
+    # plot.margin = margin(30, 30, 30, 30),
+    plot.background = element_rect(color = "white",
+                                   fill = "white"),
+    plot.title = element_text(size = 14),
+    plot.title.position = "plot",
+    plot.subtitle = element_text(size = 10),
+    plot.caption = element_text(color = "grey40",
+                                size = 9),
+    plot.caption.position = "plot",
+    axis.line.x = element_line(color = "black",
+                               size = .8),
+    axis.line.y = element_line(color = "black",
+                               size = .8),
+    axis.title.x = element_text(size = 11,
+                                face = "bold"),
+    axis.title.y = element_text(size = 11,
+                                face = "bold"),
+    axis.text = element_text(size = 9,
+                             color = "black",
+                             face = "bold"),
+    axis.ticks = element_blank(),
+    panel.grid.major.x = element_line(size = .6,
+                                      color = "#eaeaea",
+                                      linetype = "solid"),
+    panel.grid.major.y = element_line(size = .6,
+                                      color = "#eaeaea",
+                                      linetype = "solid"),
+    panel.grid.minor.x = element_line(size = .6,
+                                      color = "#eaeaea",
+                                      linetype = "solid"),
+    panel.grid.minor.y = element_blank(),
+    panel.spacing.x = unit(2, "lines"),
+    panel.spacing.y = unit(1, "lines")
+  )
+}
 
 ## theme settings for flipped plots
 theme_flip <-
@@ -276,9 +315,6 @@ avg_by_city_and_firm <- samples %>%
 ```
 
 
-# Summary
-
-not sure if keeping this...  
 
 # Introduction
 
@@ -327,7 +363,7 @@ avg_by_city_and_firm %>%
 
 From the latitude and longitude of each of the 225 measurements on the 15x15 grid, we compute the geographical distance to the location of the target law firm. We then average the ranking of a law firm by mile to its own location.  
 
-For instance, with our previous example in Miami, we see that the law firm ranked first at its own location (distance = 0 miles). The ranking drops quickly, and the average position of all the measurements taken between 0 and 1 miles average to ~9. The average rank stabilizes then around 18.      
+For instance, with our previous example in Miami, we see that the law firm ranked first at its own location (distance = 0 miles). The ranking drops quickly, and the average position of all the measurements taken between 0 and 1 miles average to ~9. The average rank stabilizes then around 18 as from the third mile already.      
 
 ```{r, fig.align='center', fig.height=5, out.width='80%'}
 
@@ -358,25 +394,96 @@ avg_by_city_and_firm %>%
 ```
 
 
-
-We are then able to compute the average drop in the ranking in function of the distance to its initial ranking for any law firm.  
-
---- insert plot example with drop.  ---
+To obtain more stable measurements of the drop in ranking, we average the rankings from each law firm.  
 
 
 # Observations
 
+We start by visualizing the average rank at each mile from the center location for each law firm in each cities. The average rank across all law firms is shown in black. It is computed with a rank of 21 for the firms out of the top 20 and for which the rank is not recorded anymore by Local Falcon.   
 
-Average drop by city:  
+We observe that the drop in ranking varies greatly between law firms. Some firms do only see a small drop in their ranking, even at 5 or 10 miles from their location.   
 
-```{r}
+
+```{r, fig.align='center', fig.height=9, out.width='100%'}
+
+average_rank_all_samples <- ggplot(data = avg_by_city_and_firm, 
+                                   mapping = aes(x = rough_geodist, y = avg_rank, group = Sample)) +
+  geom_line(alpha = 0.4) +
+  geom_line(data = avg_by_city, mapping = aes(x = rough_geodist, y = avg_rank, group = 1), size = 1.2) +
+  scale_y_reverse() +
+  scale_x_continuous(
+    breaks = seq(0,max(avg_by_city_and_firm$rough_geodist), by = 2), 
+    minor_breaks = NULL) + 
+  labs(
+    title = "The Average Drop in Ranking Varies",
+    subtitle = "The magnitude of the drop varies greatly between law firms: the highest ranking firms drop much less. \nEach grey line is a sample (a law firm), and their average is in black.\nA rank of 21  means '+20': out of the top 20."
+  ) +
+  xlab("Distance in miles to the location of the law firm") +
+  ylab("Ranking (average, binned by mile)")
+
+if(save == T){ 
+  plot_to_save <- average_rank_all_samples +
+  facet_wrap(vars(City), ncol = 5)
+    
+  ggsave(here::here("plots",
+                    "average_rank_all_samples-10cities_20samples.pdf"),
+         plot_to_save, 
+         width = 15, height = 8, device = cairo_pdf)
+}
+
+average_rank_all_samples +
+  facet_wrap(vars(City), ncol = 2) + 
+  my_theme()
+
+```
+
+
+In order to better compare the law firms, we can visualize their drop from their initial position.  
+
+
+```{r fig.align='center', fig.height=11, out.width='100%'}
+
+average_drop_all_samples <- ggplot(data = avg_by_city_and_firm, mapping = aes(x = rough_geodist, y = avg_drop, group = Sample)) +
+  geom_line(alpha = 0.4) +
+  geom_line(data = avg_by_city, mapping = aes(x = rough_geodist, y = avg_drop, group = 1), size = 1.2) +
+  scale_x_continuous(
+    breaks = seq(0, max(avg_by_city_and_firm$rough_geodist), by = 2), 
+    minor_breaks = NULL) + 
+  labs(
+    title = "The Drop in Ranking for Each Law Firm",
+    subtitle = "The magnitude of the drop varies greatly between law firms; some see almost no drop. \nEach grey line is a sample (a law firm), and their average is in black."
+  ) +
+  xlab("Distance in miles to the location of the law firm") +
+  ylab("Drop in the ranking (indexed at 0)")
+
+
+if(save == T){ 
+  plot_to_save <- average_drop_all_samples +
+    facet_wrap(vars(City), ncol = 5) 
+
+  ggsave(
+    here::here("plots",
+               "average_drop_all_samples-10cities_20samples.pdf"),
+    plot_to_save, 
+    width = 15, height = 8, device = cairo_pdf)
+}
+
+average_drop_all_samples +
+  facet_wrap(vars(City), ncol = 2) + 
+  my_theme()
+
+```
+
+
+In order to better identify and compare the drop, we focus on the average drop only:  
+
+
+```{r fig.align='center', fig.height=10, out.width='100%'}
 
 
 average_drop <- ggplot(data = avg_by_city, mapping = aes(x = rough_geodist, y = avg_drop, group = 1)) +
   geom_point() +
   geom_line() +
-  # geom_errorbar(aes(ymin = avg_drop - sd, ymax = avg_drop + sd)) + 
-  facet_wrap(vars(City), ncol = 5) + 
   scale_y_continuous(
     breaks = seq(0,round(min(avg_by_city$avg_drop)), by = -2)
   ) + 
@@ -385,131 +492,36 @@ average_drop <- ggplot(data = avg_by_city, mapping = aes(x = rough_geodist, y = 
     minor_breaks = NULL 
   ) + 
   labs(
-    title = "The average drop in position",
-    subtitle = "The ranking drops dramatically in the first mile. Distances are binned by mile."
+    title = "The Average Drop in Ranking",
+    subtitle = "The ranking drops dramatically in the first mile.\nDistances are binned by mile."
   ) +
   xlab("Distance in miles to the location of the law firm") +
-  ylab("Drop in the ranking (indexed at 0)") +
-  theme(
-    plot.title.position = "plot" # left align (sub)title
-  ) + # dunno why title is not left-aligned??
-  theme_update()
+  ylab("Drop in the ranking (indexed at 0)")
 
 # average_drop
 
 if(save == T){ 
+  plot_to_save <- average_drop +
+  facet_wrap(vars(City), ncol = 5)
+
   ggsave(here::here("plots",
-                    "1_average_drop_by_city-10cities_20samples.pdf"),
-         average_drop, 
+                    "average_drop_by_city-10cities_20samples.pdf"),
+         plot_to_save, 
          width = 15, 
          height = 8, 
          device = cairo_pdf)
 }
 
-
-```
-
-```{r, echo=FALSE,  out.width='100%', out.height='100%'}
-knitr::include_graphics(
-  here::here("plots", 
-             "1_average_drop_by_city-10cities_20samples.pdf"
-  )
-)
-```
-
-Let's have a look at all the samples in each city:  
-
-```{r}
-
-average_drop_all_samples <- ggplot(data = avg_by_city_and_firm, mapping = aes(x = rough_geodist, y = avg_drop, group = Sample)) +
-  # geom_point(alpha = 0.2) +
-  geom_line(alpha = 0.4) +
-  geom_line(data = avg_by_city, mapping = aes(x = rough_geodist, y = avg_drop, group = 1), size = 1.2) +
-  facet_wrap(vars(City), ncol = 5) + 
-  # scale_y_continuous(breaks = seq(0,-15) ) + 
-  scale_x_continuous(
-    breaks = seq(0, max(avg_by_city_and_firm$rough_geodist), by = 2), 
-    minor_breaks = NULL) + 
-  labs(
-    title = "The drop in position for each law firm",
-    subtitle = "The magnitude of the drop varies greatly between law firms; some see almost no drop. \nEach grey line is a sample (a law firm), and their average is in black."
-  ) +
-  xlab("Distance in miles to the location of the law firm") +
-  ylab("Drop in the ranking (indexed at 0)")
-
-# average_drop_all_samples
-
-if(save == T){ 
-  ggsave(
-    here::here("plots",
-               "2_average_drop_all_samples-10cities_20samples.pdf"),
-    average_drop_all_samples, 
-    width = 15, height = 8, device = cairo_pdf)
-}
-
-```
-
-```{r, echo=FALSE,  out.width='100%', out.height='100%'}
-knitr::include_graphics(
-  here::here("plots", 
-             "2_average_drop_all_samples-10cities_20samples.pdf"
-  )
-)
-```
-
-Let's have a look at their original rank. By doing so, we might be able to differentiate the fate of top-ranking law firms from others.  
-
-```{r}
-
-average_rank_all_samples <- ggplot(data = avg_by_city_and_firm, 
-                                   mapping = aes(x = rough_geodist, y = avg_rank, group = Sample)) +
-  geom_line(alpha = 0.4) +
-  geom_line(data = avg_by_city, mapping = aes(x = rough_geodist, y = avg_rank, group = 1), size = 1.2) +
-  facet_wrap(vars(City), ncol = 5) + 
-  scale_y_reverse() +
-  scale_x_continuous(
-    breaks = seq(0,max(avg_by_city_and_firm$rough_geodist), by = 2), 
-    minor_breaks = NULL) + 
-  labs(
-    title = "The rank by distance for each law firm",
-    subtitle = "The magnitude of the drop varies greatly between law firms: the highest ranking firms drop much less. \nEach grey line is a sample (a law firm), and their average is in black. A rank of 21  means '+20': out of the top 20."
-  ) +
-  xlab("Distance in miles to the location of the law firm") +
-  ylab("Ranking (average, binned by mile)") 
-
-# average_rank_all_samples
-
-if(save == T){ 
-  ggsave(here::here("plots",
-                    "3_average_rank_all_samples-10cities_20samples.pdf"),
-         average_rank_all_samples, 
-         width = 15, height = 8, device = cairo_pdf)
-}
-
-
+average_drop +
+  facet_wrap(vars(City), ncol = 2) + 
+  my_theme()
 
 
 ```
 
-```{r, echo=FALSE,  out.width='100%', out.height='100%'}
-knitr::include_graphics(
-  here::here("plots", 
-             "3_average_rank_all_samples-10cities_20samples.pdf"
-  )
-)
-```
-
-# Conclusion of the first data exploration
-
-We sampled 20 law firms in the 10 largest cities (10 with a radius of 5 miles, and 10 with a radius of 10 miles). We found them by searching for 'car accident lawyers'. For each, we measured their ranking for the keyword "car accident lawyer" at 225 location disposed on a squared grid of 5/10 miles "radius" around the original location of the firm.  
-
-Key observations:  
-1. The drop in ranking varies greatly between law firms. Some top-ranking firms do not even see a drop in the 5 miles. Some see a quick drop out of the top 20.  
-2. When there is a drop, much of the drop occurs in the first mile.  
-3. Only ~20% of the law firms dropped of the top 20 after 5 miles around their location.  
 
 
-# some key statistics
+
 
 ## average drop/mile
 
@@ -608,15 +620,31 @@ if(save == T){
 
 ```
 
-```{r, echo=FALSE,  out.width='100%', out.height='100%'}
-knitr::include_graphics(
-  here::here("plots", 
-             "5_perc_out_of_top20-10cities_20samples.pdf"
-  )
-)
-```
 
-# Draw the grid for each city
+# Conclusion of the first data exploration
+
+We sampled 20 law firms in the 10 largest cities (10 with a radius of 5 miles, and 10 with a radius of 10 miles). We found them by searching for 'car accident lawyers'. For each, we measured their ranking for the keyword "car accident lawyer" at 225 location disposed on a squared grid of 5/10 miles "radius" around the original location of the firm.  
+
+Key observations:  
+1. The drop in ranking varies greatly between law firms. Some top-ranking firms do not even see a drop in the 5 miles. Some see a quick drop out of the top 20.  
+2. When there is a drop, much of the drop occurs in the first mile.  
+3. Only ~20% of the law firms dropped of the top 20 after 5 miles around their location.  
+
+# Summary
+
+not sure if keeping this...  
+
+* very variable btw firms
+* some do not drop out of the top 20
+* variable btw cities
+* most drop in the first mile
+* here is the table of the drop for the average btw all cities
+* x% out of top 20 after 5 miles, and x after 10miles.
+
+
+
+
+# Next steps?
 
 Useful? We would be able to see the average pattern/grid, and see the drop in 2D, not in 1D. We would see that the drop is not always the same in all the directions.  
 Issue: not same location for the firms, so cannot really draw a localized average grid per city.   
