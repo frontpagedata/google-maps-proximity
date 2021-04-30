@@ -51,7 +51,7 @@ font-size: 18px;
 knitr::opts_chunk$set(warning = FALSE, message = FALSE, 
                       fig.showtext = TRUE, dpi = 700,
                       echo = FALSE # hide code for now
-                      )
+)
 
 knitr::knit_hooks$set(inline = function(x) {
   prettyNum(x, big.mark = ",", small.mark = ",", scientific = F)
@@ -65,6 +65,8 @@ extrafont::loadfonts()
 
 
 ```{r prep}
+# SETUP
+
 ## packages: remove or add your necessary packages
 
 # required_packages <- c("tidyverse", "readxl", "ggthemes", "hrbrthemes", "extrafont", "plotly", "scales", "stringr", "gganimate", "here", "tidytext", "sentimentr", "scales", "DT", "here", "sm", "mblm", "glue", "fs", "knitr", "rmdformats", "janitor", "urltools", "colorspace", "pdftools", "showtext")
@@ -214,44 +216,16 @@ pos_cols <- colfunc(10)
 
 ```{r}
 
-# Load data
+# DATA LOADING
+
 samples <- rio::import(here::here("proc_data", "samples_10cities_20samples.rds")) %>%
   mutate(
     geodist_miles = round(geodist * 0.62137119224, 2), # the distance in American miles instead of km
     drop = -drop # we want the drop to be negative
   )
 
-
 ```
 
-
-# Summary
-
-not sure if keeping this...  
-
-# Introduction
-
-Google relies on user proximity to provide local results for keywords. How strong is the proximity factor? How fast does the ranking decrease by distance from the location of a business?  
-
-The goals of the study are to try to estimate the drop in the ranking by geographical distance and to measure the variability due to the local context.
-
-## Methods
-
-For this study, we focused on personal injury lawyers in major US cities. We collected 20 top ranking personal injury lawyers in each of the 10 largest cities. 
-
-For each of these law firm, we used the service [Local Falcon](https://www.localfalcon.com/) to collect Google My Business rankings fpr listings that show up either in the Maps portion of the organic search, or from a search in the Google Maps Local Finder (i.e. Google Maps).
-
-We collected their rankings for the keyword _car accident lawyer_ at 225 locations on a 15x15 grid centered on their geographic location.  
-
-For 10 law firms, we used a radius of 5 miles, a finer granularity to better highlight the drop in ranking around the exact location of the firm. For 10 other law firms, we used a radius of 10 miles, to better identify the distance where most of the firms drop out of the top 20.  
-
-For each Localfalcon 
-
-
-at their geographical location and at 224 locations poritioned   
-
-
- 
 
 ```{r}
 
@@ -280,7 +254,7 @@ avg_by_city <- samples %>%
   ungroup() %>%
   mutate(
     percentage_out_of_top20 = (n_samples_out_of_top20 / n_samples)
-    )
+  )
 
 # a tibble with an average by city and sample
 avg_by_city_and_firm <- samples %>%
@@ -293,13 +267,104 @@ avg_by_city_and_firm <- samples %>%
             avg_rank = mean(rank),
             n_samples = n(),
             n_samples_out_of_top20 = sum(rank > 20)
-            ) %>%
+  ) %>%
   ungroup() %>%
   mutate(
     percentage_out_of_top20 = (n_samples_out_of_top20 / n_samples)
-    )
+  )
 
 ```
+
+
+# Summary
+
+not sure if keeping this...  
+
+# Introduction
+
+Google relies on user proximity to provide local results for keywords. How strong is the proximity factor? How fast does the ranking decrease by distance from the location of a business?  
+
+The goals of the study are to try to estimate the drop in the ranking by geographical distance and to measure the variability due to the local context.
+
+## Methods
+
+For this study, we focused on personal injury lawyers in major US cities. We collected 20 top ranking personal injury lawyers in each of the 10 largest cities. 
+
+For each of these law firm, we used the service [Local Falcon](https://www.localfalcon.com/) to collect Google My Business rankings for listings that show up either in the Maps portion of the organic search, or from a search in the Google Maps Local Finder (i.e. Google Maps).
+
+We collected their rankings for the keyword _car accident lawyer_ at 225 locations on a 15x15 grid centered on their geographic location.  
+
+This is an example for the city of Miami:  
+![example_miami_1](../doc/example_scan_miami_1.png){#id .class width=80% height=80%}   
+
+At the location of the law firm, it ranks 1st for the keyword _car accident lawyer_. Its ranking drops, however, as soon we are further away from its location. At the fringe of the grid, the law firm does not appear anymore in the top 20 (its exact ranking is not tracked anymore by Local Falcon).   
+
+This drop in the ranking can vary drastically between law firms, even in the same city. We see this variation if we flank our initial example with 2 other samples from Miami:    
+![example_miami_2](../doc/example_scan_miami_2.png){#id .class width=32% height=32%} ![example_miami_1](../doc/example_scan_miami_1.png){#id .class width=32% height=32%} ![example_miami_3](../doc/example_scan_miami_3.png){#id .class width=32% height=32%}    
+On the left, we see a very quick drop in the ranking. On a the right, we see the case of a law firm which ranking does not drop much. The grid is always centered on the location of the target law firm.     
+
+To account for this high variation between the firm, we need to collect several samples in each city: 20. For 10 law firms, we used a radius of 5 miles, a finer granularity to better highlight the drop in ranking around the exact location of the firm. For 10 other law firms, we used a radius of 10 miles, to better identify the distance where most of the firms drop out of the top 20.  
+
+&nbsp;
+
+Most of the 200 law firms rank 1st at their own location (58%).  
+
+```{r, fig.align='center', fig.height=5, out.width='80%'}
+
+avg_by_city_and_firm %>% 
+  filter(rough_geodist == 0) %>%
+  count(avg_rank) %>%
+  mutate(initial_rank_in_perc = n/sum(n)) %>%
+  ggplot(aes(x = avg_rank, y = initial_rank_in_perc)) +
+  geom_col() +
+  scale_y_continuous(labels = scales::percent) +
+  xlab("Rank at own location") +
+  ylab("Percentage of law firms")
+
+```
+
+&nbsp;
+
+From the latitude and longitude of each of the 225 measurements on the 15x15 grid, we compute the geographical distance to the location of the target law firm. We then average the ranking of a law firm by mile to its own location.  
+
+For instance, with our previous example in Miami, we see that the law firm ranked first at its own location (distance = 0 miles). The ranking drops quickly, and the average position of all the measurements taken between 0 and 1 miles average to ~9. The average rank stabilizes then around 18.      
+
+```{r, fig.align='center', fig.height=5, out.width='80%'}
+
+avg_by_city_and_firm %>% 
+  filter(City == "Miami",
+         Sample == "12") %>%
+  ggplot(mapping = aes(x = rough_geodist, y = avg_rank)) +
+  geom_point() +
+  geom_line() + 
+  scale_y_reverse(
+    breaks = seq(1,round(max(avg_by_city_and_firm$avg_rank)), by = 2)
+  ) +
+  # scale_y_reverse() +
+  scale_x_continuous(
+    breaks = seq(0,max(avg_by_city_and_firm$rough_geodist), by = 1), 
+    minor_breaks = NULL) + 
+  # labs(
+  #   title = "The average drop in position",
+  #   subtitle = "The ranking drops dramatically in the first mile. Distances are binned by mile."
+  # ) +
+  xlab("Distance in miles to the location of the law firm") +
+  ylab("Ranking\n(average, binned by mile)") +
+  annotate(geom = "text", x=4, y=1, 
+           label="This firm ranks 1st at its location (0 miles)...") +
+  annotate(geom = "text", x=5.5, y=9, 
+           label="... and quickly ranks, on average, 9th after 1 mile.")
+
+```
+
+
+
+We are then able to compute the average drop in the ranking in function of the distance to its initial ranking for any law firm.  
+
+--- insert plot example with drop.  ---
+
+
+# Observations
 
 
 Average drop by city:  
@@ -348,8 +413,8 @@ if(save == T){
 knitr::include_graphics(
   here::here("plots", 
              "1_average_drop_by_city-10cities_20samples.pdf"
-             )
   )
+)
 ```
 
 Let's have a look at all the samples in each city:  
@@ -388,8 +453,8 @@ if(save == T){
 knitr::include_graphics(
   here::here("plots", 
              "2_average_drop_all_samples-10cities_20samples.pdf"
-             )
   )
+)
 ```
 
 Let's have a look at their original rank. By doing so, we might be able to differentiate the fate of top-ranking law firms from others.  
@@ -430,8 +495,8 @@ if(save == T){
 knitr::include_graphics(
   here::here("plots", 
              "3_average_rank_all_samples-10cities_20samples.pdf"
-             )
   )
+)
 ```
 
 # Conclusion of the first data exploration
@@ -500,33 +565,6 @@ if(save == T){
 
 Most of this drop is happening in the first mile(s). 
 
-## initial position of the law firms
-
-```{r}
-
-avg_by_city_and_firm %>% 
-  filter(rough_geodist == 0) %>%
-  ggplot(aes(x = avg_rank)) +
-  geom_bar() +
-  xlab("initial rank")
-
-# percentage of samples with initial rank == 1:
-perc_with_init_rank_one <- avg_by_city_and_firm %>% 
-  filter(rough_geodist == 0) %>%
-  count(avg_rank) %>%
-  summarise(
-    perc_with_init_rank_one = (
-      avg_by_city_and_firm %>% filter(rough_geodist == 0) %>% count(avg_rank) %>%
-        filter(avg_rank == 1) %>% .$n) / (avg_by_city_and_firm %>%
-                                            filter(rough_geodist == 0) %>%
-                                            count(avg_rank) %>%
-                                            summarise(sum(n)) %>% .$`sum(n)`)
-    ) 
-perc_with_init_rank_one = round(perc_with_init_rank_one * 100)
-
-```
-
-At their own location, `r perc_with_init_rank_one`% of the law firms held the first position.   
 
 ## Percentage out of the top20 per mile
 
@@ -565,7 +603,7 @@ if(save == T){
          height = 8, 
          device = cairo_pdf)
 }
-  
+
 
 
 ```
@@ -574,8 +612,8 @@ if(save == T){
 knitr::include_graphics(
   here::here("plots", 
              "5_perc_out_of_top20-10cities_20samples.pdf"
-             )
   )
+)
 ```
 
 # Draw the grid for each city
