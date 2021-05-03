@@ -263,7 +263,21 @@ r_col <- "#D21D5C"
 samples <- rio::import(here::here("proc_data", "samples_10cities_20samples.rds")) %>%
   mutate(
     geodist_miles = round(geodist * 0.62137119224, 2), # the distance in American miles instead of km
-    drop = -drop # we want the drop to be negative
+    drop = -drop, # we want the drop to be negative
+    # convert the city to factor and order by population:
+    City = fct_relevel(City, 
+                       levels = c(
+                         "New-York",
+                         "Los-Angeles",
+                         "Chicago",
+                         "Miami",
+                         "Dallas",
+                         "Philadelphia",
+                         "Houston",
+                         "Atlanta",
+                         "Washington",
+                         "Boston"
+                       ))
   )
 
 ```
@@ -283,7 +297,7 @@ samples <- rio::import(here::here("proc_data", "samples_10cities_20samples.rds")
 # a tibble with an average by city
 avg_by_city <- samples %>%
   mutate(
-    rough_geodist = cut(geodist_miles, breaks = seq(0, max(samples$geodist_miles)+1), labels = FALSE), # bin by m ile 
+    rough_geodist = cut(geodist_miles, breaks = seq(0, max(samples$geodist_miles)+1), labels = FALSE), # bin by mile 
     rough_geodist = ifelse(is.na(rough_geodist), 0, rough_geodist) # the bin 0 is 0 instead of NA
   ) %>%
   group_by(City, rough_geodist) %>%
@@ -317,16 +331,6 @@ avg_by_city_and_firm <- samples %>%
 
 ```
 
-# TODO
-
-* conclude
-* Check spelling  
-* Order cities by size and not alphabetical order
-* Check plot design
-* add figure number 
-
-
-
 # Introduction
 
 Google relies on user proximity to provide local results for keywords. How strong is the proximity factor? How fast does the ranking decrease by distance from the location of a business?  
@@ -335,9 +339,9 @@ The goals of the study are to try to estimate the drop in the ranking by geograp
 
 ## Methods
 
-For this study, we focused on personal injury lawyers in major US cities. We collected 20 top ranking personal injury lawyers in each of the 10 largest cities. 
+For this study, we focused on personal injury lawyers in major US cities. We collected 20 top-ranking personal injury lawyers in each of the 10 largest cities. 
 
-For each of these law firm, we used the service [Local Falcon](https://www.localfalcon.com/) to collect Google My Business rankings for listings that show up either in the Maps portion of the organic search, or from a search in the Google Maps Local Finder (i.e. Google Maps).
+For each of these law firms, we used the service [Local Falcon](https://www.localfalcon.com/) to collect Google My Business rankings for listings that show up either in the Maps portion of the organic search or from a search in the Google Maps Local Finder (i.e. Google Maps).
 
 We collected their rankings for the keyword _car accident lawyer_ at 225 locations on a 15x15 grid centered on their geographic location.  
 
@@ -348,7 +352,7 @@ At the location of the law firm, it ranks 1st for the keyword _car accident lawy
 
 This drop in the ranking can vary drastically between law firms, even in the same city. We see this variation if we flank our initial example with 2 other samples from Miami:    
 ![example_miami_2](../doc/example_scan_miami_2.png){#id .class width=32% height=32%} ![example_miami_1](../doc/example_scan_miami_1.png){#id .class width=32% height=32%} ![example_miami_3](../doc/example_scan_miami_3.png){#id .class width=32% height=32%}    
-On the left, we see a very quick drop in the ranking. On a the right, we see the case of a law firm which ranking does not drop much. The grid is always centered on the location of the target law firm.     
+On the left, we see a very quick drop in the ranking. On the right, we see the case of a law firm which ranking does not drop much. The grid is always centered on the location of the target law firm.     
 
 To account for this high variation between the firm, we need to collect several samples in each city: 20. For 10 law firms, we used a radius of 5 miles, a finer granularity to better highlight the drop in ranking around the exact location of the firm. For 10 other law firms, we used a radius of 10 miles, to better identify the distance where most of the firms drop out of the top 20.  
 
@@ -372,7 +376,7 @@ avg_by_city_and_firm %>%
 
 &nbsp;
 
-From the latitude and longitude of each of the 225 measurements on the 15x15 grid, we compute the geographical distance to the location of the target law firm. We then average the ranking of a law firm by mile to its own location.  
+From the latitude and longitude of each of the 225 measurements on the 15x15 grid, we compute the geographical distance to the location of the target law firm. We then average the ranking of a law firm by mile distance to its own location.  
 
 For instance, with our previous example in Miami, we see that the law firm ranked first at its own location (distance = 0 miles). The ranking drops quickly, and the average position of all the measurements taken between 0 and 1 miles average to ~9. The average rank stabilizes then around 18 as from the third mile already. Please note that we made the following choice: Local Falcon does not collect rankings above 20, they are just collected as "20+". In order to compute the average rankings, we impute these "20+" values to the value 21. This has an impact on the computation of the average ranking.   
 
@@ -410,7 +414,7 @@ To obtain more stable measurements of the drop in ranking, we average the rankin
 
 # Observations
 
-We start by visualizing the average rank at each mile from the center location for each law firm in each cities. The average rank across all law firms is shown in pink. It is computed with a rank of 21 for the firms out of the top 20 and for which the rank is not recorded anymore by Local Falcon.   
+We start by visualizing the average rank at each mile from the center location for each law firm in each city. The average rank across all law firms is shown in pink. It is computed with a rank of 21 for the firms out of the top 20 and for which the rank is not recorded anymore by Local Falcon.   
 
 We observe that the drop in ranking varies greatly between law firms. Some firms do only see a small drop in their ranking, even at 5 or 10 miles from their location.   
 
@@ -449,7 +453,7 @@ average_rank_all_samples +
 ```
 
 
-In order to better compare the law firms, we can visualize their drop from their initial position.  
+In order to better compare the law firms, we can visualize their drop from their initial position (relative ranking):  
 
 
 ```{r fig.align='center', fig.height=11, out.width='100%'}
@@ -486,7 +490,7 @@ average_drop_all_samples +
 ```
 
 
-In order to better identify and compare the drop, we focus on the average drop only. __This figure shows the average drop in ranking in relation to the distance from the location of a firm__. It summarizes and simplifies the figures above. Please note that the average are computed with an imputed value of "21" for the ranks out of the top 20.   
+In order to better identify and compare the drop, we focus on the average drop only. __The following figure shows the average drop in ranking in relation to the distance from the location of a firm__. It summarizes and simplifies the figures above. Please note that the averages are computed with an imputed value of "21" for the ranks out of the top 20.   
 
 
 ```{r fig.align='center', fig.height=10, out.width='100%'}
@@ -537,9 +541,17 @@ We can average these results over all the law firms and all the cities in a sing
 avg_by_city_and_firm %>% 
   group_by(rough_geodist) %>%
   summarise(average_drop = mean(avg_drop)) %>%
-  select(`Distance to Firm` = rough_geodist, 
-         `Average Cumulative Drop` = average_drop) %>%
-  kable()
+  select(`Distance to Firm (miles)` = rough_geodist, 
+         `Average Cumulative Drop (position)` = average_drop) %>%
+  kable(
+    format = "html",
+    digits = 1
+  ) %>% 
+  kable_styling(
+    bootstrap_options = 'condensed',
+    full_width = FALSE,
+    position = 'center'
+  )
 
 ```
 
@@ -547,11 +559,11 @@ Note that, again, the average is computed with a constant value of "21" for the 
 
 ## Dropping Out of the Top 20
 
-Google Maps shows 20 results on the first search page and Local Falcon does not collect the ranking above the top 20. We saw above that the ranking was dropping fast in the first mile, but also that not all the firms where dropping out of the top 20 after 10 miles. And this, in all cities, regardless of their area.  
+Google Maps shows 20 results on the first search page and Local Falcon does not collect the ranking above the top 20. We saw above that the ranking was dropping fast in the first mile, but also that not all the firms were dropping out of the top 20 after 10 miles. And this, in all cities, regardless of their area.  
 
 For example, a 10-mile radius is enough to completely cover the city of Boston and its surroundings, but this is absolutely not the case in Los Angeles. However, in both cases, we identify companies that fall out of the top 20 after 5 or 10 miles and others that do not fall out of the top 20.  
 
-How does the proportion of law firms out of the top 20 changes with distance?  
+How does the proportion of law firms out of the top 20 change with distance?  
 
 ```{r fig.align='center', fig.height=10, out.width='100%'}
 
@@ -594,31 +606,32 @@ perc_out_of_top20 +
 
 ```
 
-The percentage are computed on 20 sample law firms for the first 6-7 miles, and then on 10 only for the last miles until the distance of 12 to 14 miles from the location of each firm. 
+The percentages are computed on 20 sample law firms for the first 6-7 miles, and then on 10 only for the last miles until the distance of 12 to 14 miles from the location of each firm. 
 
-(Note: 6-7 and 12-14 miles and not 5 and 10, because this is the hypotenuse; the imprecise distances is due to the precision of Local Falcon, geolocalization and computation of geographical distance from coordinates).  
+(Note: 6-7 and 12-14 miles and not 5 and 10, because this is the hypotenuse; the imprecise distances is due to the precision of Local Falcon, geolocalization, and computation of geographical distance from coordinates).  
 
 
 # Summary and Conclusion
 
-As this analysis included a certain amount of uncertainty, we preferred to proceed in stages and offer Rankings.io preliminary analyses with the 10 largest cities.  
+As this analysis included a certain amount of uncertainty, in particular with regards to the variability of the results between each city and between each firm, we preferred to proceed in stages and offer Rankings.io preliminary analyses with the 10 largest cities.     
 
-We sampled 20 personal injury law firms in the 10 largest cities (10 with a radius of 5 miles, and 10 with a radius of 10 miles). For each, we measured their ranking for the keyword "car accident lawyer" at 225 location disposed on a squared grid of 5/10 miles "radius" around the original location of the firm, using Local Falcon. We then compute the rankings and relative ranking (drop) of each law firm for each mile away from its location.  
+We sampled 20 personal injury law firms in the 10 largest cities (10 with a radius of 5 miles, and 10 with a radius of 10 miles). For each, we measured their ranking for the keyword "car accident lawyer" at 225 locations disposed on a squared grid of 5/10 miles "radius" around the original location of the firm, using Local Falcon. We then compute the rankings and relative ranking (drop) of each law firm for each mile away from its location.  
 
-Key observations:  
+__Key observations__:  
 
-1. The ranking drops dramatically in the first mile; in all cities. On average, the drop in ranking in the first mile is of -7.4 positions.  
-2. The drop in ranking varies greatly between law firms. Some top-ranking firms do not even see a drop in the 10 mile radius. This means that there is probably no distance which would guarantee that all of the law firms in a given city drop out of the top 20.  
-3. After the quick drop, the average ranking stabilizes or decreases much slower This effect is partly due to observation 2: we compute an average between law firms still ranking well and law firms which ranking is imputed to 21 because they are out of the top 20. This effect, albeit with some slight variations, is seen in all cities.    
-4. The percentage of law firms which dropped out of the top 20 by mile is varying between cities. For instance, it jumps to almost 40% in the first mile in Atlanta or Philadelphia, but never increases much more. On the contrary, It reaches almost 80% in Boston or Washington DC.     
+1. The ranking drops dramatically in the first mile; in all cities. On average, the drop in ranking in the first mile is -7.4 positions.  
+2. The drop in ranking varies greatly between law firms. Some top-ranking firms do not even see a drop in the 10-mile radius. This means that there is probably no distance that would guarantee that all of the law firms in a given city drop out of the top 20.  
+3. After the quick drop, the average ranking stabilizes or decreases much slower. This effect is partly due to observation 2: we compute an average between law firms still ranking well and law firms which ranking is imputed to 21 because they are out of the top 20. This effect, albeit with some slight variations, is seen in all cities.    
+4. The percentage of law firms that dropped out of the top 20 for each mile distance is varying between cities. For instance, it jumps to almost 40% in the first mile in Atlanta or Philadelphia, but never increases much more. On the contrary, it reaches almost 80% in Boston or Washington DC.     
 
-All these observations might have an impact the current Rankings.io offer of a 5-mile geographic radius around a client’s headquarters to take more than one client in larger cities.   
+All these observations might have an impact on the current Rankings.io offer of a 5-mile geographic radius around a client’s headquarters to take more than one client in larger cities.   
 
 ## Next Steps
 
-Depending on the interests of Rankings.io, this analysis could be:  
+FrontPage Data is looking forward to the comments and feedback from Rankings.io. Depending on the interests of Rankings.io, this analysis could be:  
+
 * Published as such. A narrative around this preliminary analysis will be proposed to Rankings.io.
 * Extended to integrate more cities than the top 10.  
-* Extended to collect more samples for the top 10 cities, in order to refine the measurements.   
+* Extended to collect more samples for the top 10 cities, in order to refine the measurements (could be useful to better highlight the distance at which most of the law firms drop out of the top 20. Currently, at a 10-mile radius distance, we only collect 10 samples).   
 
 
