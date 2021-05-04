@@ -415,6 +415,8 @@ To obtain more stable measurements of the drop in ranking, we average the rankin
 
 # Observations
 
+## Average Rank at Each Mile from Location
+
 We start by visualizing the average rank at each mile from the center location for each law firm in each city. The average rank across all law firms is shown in pink. It is computed with a rank of 21 for the firms out of the top 20 and for which the rank is not recorded anymore by Local Falcon.   
 
 We observe that the drop in ranking varies greatly between law firms. Some firms do only see a small drop in their ranking, even at 5 or 10 miles from their location.   
@@ -558,7 +560,7 @@ avg_by_city_and_firm %>%
 
 Note that, again, the average is computed with a constant value of "21" for the samples out of the top 20.  
 
-## Dropping Out of the Top 20
+## When are Law Firms Dropping Out of the Top 20?
 
 Google Maps shows 20 results on the first search page and Local Falcon does not collect the ranking above the top 20. We saw above that the ranking was dropping fast in the first mile, but also that not all the firms were dropping out of the top 20 after 10 miles. And this, in all cities, regardless of their area.  
 
