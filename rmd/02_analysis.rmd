@@ -1,6 +1,6 @@
 ---
 title: "Google Maps Ranking - Proximity Study"
-author: "Preliminary Results, François"
+author: "Preliminary Results, François Delavy"
 date: "Last updated on `r Sys.Date()`"
 output:
   html_document:
@@ -10,6 +10,7 @@ output:
     toc: true
     toc_depth: 3
     toc_float: true
+    number_sections: true
 editor_options: 
   chunk_output_type: console
 ---
@@ -431,7 +432,7 @@ average_rank_all_samples <- ggplot(data = avg_by_city_and_firm,
     minor_breaks = NULL) + 
   labs(
     title = "The Average Drop in Ranking Varies",
-    subtitle = "The magnitude of the drop varies greatly between law firms: the highest ranking firms drop much less. \nEach grey line is a sample (a law firm), and their average is in black.\nA rank of 21  means '+20': out of the top 20."
+    subtitle = "The magnitude of the drop varies greatly between law firms: the highest ranking firms drop much less. \nEach grey line is a sample (a law firm), and their average is in pink.\nA rank of 21  means '+20': out of the top 20."
   ) +
   xlab("Distance in miles to the location of the law firm") +
   ylab("Ranking (average, binned by mile)")
@@ -466,7 +467,7 @@ average_drop_all_samples <- ggplot(data = avg_by_city_and_firm, mapping = aes(x 
     minor_breaks = NULL) + 
   labs(
     title = "The Drop in Ranking for Each Law Firm",
-    subtitle = "The magnitude of the drop varies greatly between law firms; some see almost no drop. \nEach grey line is a sample (a law firm), and their average is in black."
+    subtitle = "The magnitude of the drop varies greatly between law firms; some see almost no drop. \nEach grey line is a sample (a law firm), and their average is in pink."
   ) +
   xlab("Distance in miles to the location of the law firm") +
   ylab("Drop in the ranking (indexed at 0)")
@@ -497,8 +498,8 @@ In order to better identify and compare the drop, we focus on the average drop o
 
 
 average_drop <- ggplot(data = avg_by_city, mapping = aes(x = rough_geodist, y = avg_drop, group = 1)) +
-  geom_point() +
-  geom_line() +
+  geom_point(color = r_col) +
+  geom_line(color = r_col) +
   scale_y_continuous(
     breaks = seq(0,round(min(avg_by_city$avg_drop)), by = -2)
   ) + 
@@ -611,27 +612,23 @@ The percentages are computed on 20 sample law firms for the first 6-7 miles, and
 (Note: 6-7 and 12-14 miles and not 5 and 10, because this is the hypotenuse; the imprecise distances is due to the precision of Local Falcon, geolocalization, and computation of geographical distance from coordinates).  
 
 
-# Summary and Conclusion
+# Summary and Key Observations
 
 As this analysis included a certain amount of uncertainty, in particular with regards to the variability of the results between each city and between each firm, we preferred to proceed in stages and offer Rankings.io preliminary analyses with the 10 largest cities.     
 
 We sampled 20 personal injury law firms in the 10 largest cities (10 with a radius of 5 miles, and 10 with a radius of 10 miles). For each, we measured their ranking for the keyword "car accident lawyer" at 225 locations disposed on a squared grid of 5/10 miles "radius" around the original location of the firm, using Local Falcon. We then compute the rankings and relative ranking (drop) of each law firm for each mile away from its location.  
 
-__Key observations__:  
+## Key Observations 
 
-1. The ranking drops dramatically in the first mile; in all cities. On average, the drop in ranking in the first mile is -7.4 positions.  
-2. The drop in ranking varies greatly between law firms. Some top-ranking firms do not even see a drop in the 10-mile radius. This means that there is probably no distance that would guarantee that all of the law firms in a given city drop out of the top 20.  
-3. After the quick drop, the average ranking stabilizes or decreases much slower. This effect is partly due to observation 2: we compute an average between law firms still ranking well and law firms which ranking is imputed to 21 because they are out of the top 20. This effect, albeit with some slight variations, is seen in all cities.    
+1. The ranking drops dramatically in the first mile; in all cities. On average, the drop in ranking in the first mile is -7.4 positions.   
+
+2. The drop in ranking varies greatly between law firms. Some top-ranking firms do not even see a drop in the 10-mile radius. This means that there is probably no distance that would guarantee that all of the law firms in a given city drop out of the top 20.       
+
+3. After the quick drop, the average ranking stabilizes or decreases much slower. This effect is partly due to observation 2: we compute an average between law firms still ranking well and law firms which ranking is imputed to 21 because they are out of the top 20. This effect, albeit with some slight variations, is seen in all cities.     
+
 4. The percentage of law firms that dropped out of the top 20 for each mile distance is varying between cities. For instance, it jumps to almost 40% in the first mile in Atlanta or Philadelphia, but never increases much more. On the contrary, it reaches almost 80% in Boston or Washington DC.     
 
 All these observations might have an impact on the current Rankings.io offer of a 5-mile geographic radius around a client’s headquarters to take more than one client in larger cities.   
 
-## Next Steps
-
-FrontPage Data is looking forward to the comments and feedback from Rankings.io. Depending on the interests of Rankings.io, this analysis could be:  
-
-* Published as such. A narrative around this preliminary analysis will be proposed to Rankings.io.
-* Extended to integrate more cities than the top 10.  
-* Extended to collect more samples for the top 10 cities, in order to refine the measurements (could be useful to better highlight the distance at which most of the law firms drop out of the top 20. Currently, at a 10-mile radius distance, we only collect 10 samples).   
 
 
