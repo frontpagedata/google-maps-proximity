@@ -257,13 +257,13 @@ r_col <- "#D21D5C"
 ```
 
 
-```{r}
+```{r} 
 
 # DATA LOADING
 
-samples <- rio::import(here::here("proc_data", "samples_10cities_20samples.rds")) %>%
+samples <- rio::import(here::here("proc_data", "samples_50cities.rds")) %>%
   mutate(
-    geodist_miles = round(geodist * 0.62137119224, 2), # the distance in American miles instead of km
+    geodist_miles = round(geodist * 0.62137119224, 3), # the distance in American miles instead of km
     drop = -drop, # we want the drop to be negative
     # convert the city to factor and order by population:
     City = fct_relevel(City, 
@@ -277,9 +277,62 @@ samples <- rio::import(here::here("proc_data", "samples_10cities_20samples.rds")
                          "Houston",
                          "Atlanta",
                          "Washington",
-                         "Boston"
+                         "Boston",
+                         "Phoenix",
+                         "Seattle",
+                         "San-Francisco",
+                         "Detroit",
+                         "San-Diego",
+                         "Minneapolis",
+                         "Tampa",
+                         "Denver",
+                         "Brooklyn",
+                         "Queens",
+                         "Riverside",
+                         "Baltimore",
+                         "Las-Vegas",
+                         "Portland",
+                         "San-Antonio",
+                         "St.-Louis",
+                         "Sacramento",
+                         "Orlando",
+                         "San-Jose",
+                         "Cleveland",
+                         "Pittsburgh",
+                         "Austin",
+                         "Cincinnati",
+                         "Kansas-City",
+                         "Indianapolis",
+                         "Columbus",
+                         "Charlotte",
+                         "Virginia-Beach",
+                         "Bronx",
+                         "Milwaukee",
+                         "Providence",
+                         "Jacksonville",
+                         "Salt-Lake-City",
+                         "Nashville",
+                         "Richmond",
+                         "Memphis",
+                         "Raleigh",
+                         "New-Orleans",
+                         "Louisville",
+                         "Oklahoma-City"
                        ))
   )
+
+# # check how many samples in first mile:
+# ten_miles_samples = c("11", "12", "13", "14", "15","16", "17", "18","19", "20")
+# samples %>% filter(Sample %in% ten_miles_samples) %>% count(geodist_miles) %>% mutate(
+#   rough_geodist = cut(geodist_miles, breaks = seq(0, max(samples$geodist_miles)+1), labels = FALSE), # bin by mile
+#   rough_geodist = ifelse(is.na(rough_geodist), 0, rough_geodist) # the bin 0 is 0 instead of NA
+# ) %>%
+#   ungroup() %>%
+#   group_by(rough_geodist) %>%
+#   summarise(sum_n = sum(n)) %>%
+#   View()
+# 
+# samples  %>% filter(Sample %in% ten_miles_samples) %>% filter(geodist_miles < 1, geodist_miles != 0) %>% count(Sample)
 
 ```
 
@@ -422,7 +475,7 @@ We start by visualizing the average rank at each mile from the center location f
 We observe that the drop in ranking varies greatly between law firms. Some firms do only see a small drop in their ranking, even at 5 or 10 miles from their location.   
 
 
-```{r, fig.align='center', fig.height=9, out.width='100%'}
+```{r, fig.align='center', fig.height=20, out.width='100%'}
 
 average_rank_all_samples <- ggplot(data = avg_by_city_and_firm, 
                                    mapping = aes(x = rough_geodist, y = avg_rank, group = Sample)) +
@@ -444,13 +497,13 @@ if(save == T){
     facet_wrap(vars(City), ncol = 5)
   
   ggsave(here::here("plots",
-                    "average_rank_all_samples-10cities_20samples.pdf"),
+                    "average_rank_all_samples-50cities.pdf"),
          plot_to_save, 
-         width = 15, height = 8, device = cairo_pdf)
+         width = 15, height = 40, device = cairo_pdf)
 }
 
 average_rank_all_samples +
-  facet_wrap(vars(City), ncol = 2) + 
+  facet_wrap(vars(City), ncol = 3) + 
   my_theme()
 
 ```
@@ -459,7 +512,7 @@ average_rank_all_samples +
 In order to better compare the law firms, we can visualize their drop from their initial position (relative ranking):  
 
 
-```{r fig.align='center', fig.height=11, out.width='100%'}
+```{r fig.align='center', fig.height=25, out.width='100%'}
 
 average_drop_all_samples <- ggplot(data = avg_by_city_and_firm, mapping = aes(x = rough_geodist, y = avg_drop, group = Sample)) +
   geom_line(alpha = 0.4) +
@@ -481,13 +534,13 @@ if(save == T){
   
   ggsave(
     here::here("plots",
-               "average_drop_all_samples-10cities_20samples.pdf"),
+               "average_drop_all_samples-50cities.pdf"),
     plot_to_save, 
-    width = 15, height = 8, device = cairo_pdf)
+    width = 15, height = 40, device = cairo_pdf)
 }
 
 average_drop_all_samples +
-  facet_wrap(vars(City), ncol = 2) + 
+  facet_wrap(vars(City), ncol = 5) + 
   my_theme()
 
 ```
@@ -496,7 +549,7 @@ average_drop_all_samples +
 In order to better identify and compare the drop, we focus on the average drop only. __The following figure shows the average drop in ranking in relation to the distance from the location of a firm__. It summarizes and simplifies the figures above. Please note that the averages are computed with an imputed value of "21" for the ranks out of the top 20.   
 
 
-```{r fig.align='center', fig.height=10, out.width='100%'}
+```{r fig.align='center', fig.height=20, out.width='100%'}
 
 
 average_drop <- ggplot(data = avg_by_city, mapping = aes(x = rough_geodist, y = avg_drop, group = 1)) +
@@ -523,15 +576,15 @@ if(save == T){
     facet_wrap(vars(City), ncol = 5)
   
   ggsave(here::here("plots",
-                    "average_drop_by_city-10cities_20samples.pdf"),
+                    "average_drop_by_city-50cities.pdf"),
          plot_to_save, 
          width = 15, 
-         height = 8, 
+         height = 40, 
          device = cairo_pdf)
 }
 
 average_drop +
-  facet_wrap(vars(City), ncol = 2) + 
+  facet_wrap(vars(City), ncol = 4) + 
   my_theme()
 
 
@@ -595,7 +648,7 @@ if(save == T){
     ylab("Percentage of the firms\nout of the top 20")
   
   ggsave(here::here("plots",
-                    "perc_out_of_top20-10cities_20samples.pdf"),
+                    "perc_out_of_top20-50cities.pdf"),
          perc_out_of_top20, 
          width = 15, 
          height = 8, 

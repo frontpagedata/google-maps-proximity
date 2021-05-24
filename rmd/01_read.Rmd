@@ -97,7 +97,7 @@ for (file in all_files){
   # print(origin_rank)
   sample <- sample %>% 
     mutate(
-      geodist = as.numeric(round(geodist::geodist_vec(Latitude, Longitude, origin_lat, origin_lon)/1000, 3)), # /1000 for km
+      geodist = as.numeric(round(geodist::geodist_vec(Latitude, Longitude, origin_lat, origin_lon)/1000, 4)), # /1000 for km
       rank = case_when(
         `Your Rank` == "20+" ~ 21,
         TRUE ~ as.numeric(as.character(`Your Rank`))
@@ -124,8 +124,8 @@ all_samples = do.call(rbind, all_samples_list) %>%
 # it should contain all what we need for the analyses.
 # rio::export(all_samples, "../proc_data/samples_10_10.csv")
 # rio::export(all_samples, "../proc_data/samples_10_10.rds")
-rio::export(all_samples, here::here("proc_data", "samples_10cities_20samples.csv"))
-rio::export(all_samples, here::here("proc_data", "samples_10cities_20samples.rds"))
+rio::export(all_samples, here::here("proc_data", "samples_50cities.csv"))
+rio::export(all_samples, here::here("proc_data", "samples_50cities.rds"))
 
 
 ```
