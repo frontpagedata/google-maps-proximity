@@ -40,3 +40,4 @@ vignettes/*.pdf
 
 # ignore the HTML because too big
 rmd/02_analysis.html
+02_analysis.html
