@@ -348,12 +348,23 @@ samples <- rio::import(here::here("proc_data", "samples_50cities.rds")) %>%
 # method: because the geo distance varies, and is not the EXACT same
 # btw cities and samples, we bin by mile to plot.
 
-# a tibble with an average by city
-avg_by_city <- samples %>%
+# we start by adding "bin" (rounding) the geographical distance:
+samples <- samples %>% 
   mutate(
     rough_geodist = cut(geodist_miles, breaks = seq(0, max(samples$geodist_miles)+1), labels = FALSE), # bin by mile 
-    rough_geodist = ifelse(is.na(rough_geodist), 0, rough_geodist) # the bin 0 is 0 instead of NA
+    rough_geodist = ifelse(is.na(rough_geodist), 0, rough_geodist), # the bin 0 is 0 instead of NA
+    granular_geodist = cut(geodist_miles, breaks = seq(0, max(samples$geodist_miles)+1, 0.1), labels = FALSE)/10, # bin by 10th of a mile 
+    granular_geodist = ifelse(is.na(granular_geodist), 0, granular_geodist), # the bin 0 is 0 instead of NA
   ) %>%
+  rowwise() %>%
+  mutate(
+    unique_sample = paste(as.character(City), Sample, collapse = "_") # a unique id
+  ) %>%
+  ungroup()
+
+
+# a tibble with an average by city
+avg_by_city <- samples %>%
   group_by(City, rough_geodist) %>%
   summarise(avg_drop = mean(drop),
             n_samples = n(),
@@ -368,10 +379,6 @@ avg_by_city <- samples %>%
 
 # a tibble with an average by city and sample
 avg_by_city_and_firm <- samples %>%
-  mutate(
-    rough_geodist = cut(geodist_miles, breaks = seq(0, max(samples$geodist_miles)+1), labels = FALSE), # bin by mile 
-    rough_geodist = ifelse(is.na(rough_geodist), 0, rough_geodist) # the bin 0 is 0 instead of NA
-  ) %>%
   group_by(City, Sample, rough_geodist) %>%
   summarise(avg_drop = mean(drop),
             avg_rank = mean(rank),
@@ -391,11 +398,6 @@ avg_by_city_and_firm <- samples %>%
 
 # a tibble with an average by sample, regardless of city
 avg_by_firm <- samples %>%
-  mutate(
-    unique_sample = paste(City, Sample, collapse = "_"),
-    rough_geodist = cut(geodist_miles, breaks = seq(0, max(samples$geodist_miles)+1), labels = FALSE), # bin by mile 
-    rough_geodist = ifelse(is.na(rough_geodist), 0, rough_geodist) # the bin 0 is 0 instead of NA
-  ) %>%
   group_by(unique_sample, rough_geodist) %>%
   summarise(avg_drop = mean(drop),
             n_samples = n(),
@@ -407,6 +409,26 @@ avg_by_firm <- samples %>%
   mutate(
     percentage_out_of_top20 = (n_samples_out_of_top20 / n_samples)
   )
+
+
+# a tibble with a granularity of tenth of a mile:
+# a tibble with an average by city and sample
+avg_by_city_and_firm_granular <- samples %>%
+  group_by(City, Sample, unique_sample, granular_geodist) %>%
+  summarise(avg_drop = mean(drop),
+            avg_rank = mean(rank),
+            n_samples = n(),
+            n_samples_out_of_top20 = sum(rank > 20)
+  ) %>%
+  ungroup() %>%
+  mutate(
+    percentage_out_of_top20 = (n_samples_out_of_top20 / n_samples),
+  ) %>%
+  rowwise() %>%
+  mutate(
+    unique_sample = paste(as.character(City), Sample, collapse = "_") # a unique id
+  ) %>%
+  ungroup()
 
 ```
 
@@ -907,27 +929,46 @@ avg_by_city_and_firm %>%
 
 As we just saw, the drop in term of ranking has the same shape in all cities. The drop seems to follow more or less a rule of [exponential decay](https://en.wikipedia.org/wiki/Exponential_decay): it decreases at a rate proportional to its current value. At first it decreases fast and then reach stability.  
 
-We start by illustrating the fit with all the samples in all cities together. In pink, we see the average drop in ranking regardless of the city:  
+We start by illustrating the fit with all the samples taken in all cities, together. In order to get a better estimate of the exponential decay function, we average the data each tenth of a mile. In pink, we see the average drop in ranking regardless of the city:  
 
 ````{r fig.align='center', fig.height=6, out.width='100%'}
 
-avg_drop_total <- avg_by_city_and_firm %>%
-  group_by(rough_geodist) %>%
+avg_drop_total <- avg_by_city_and_firm_granular %>%
+  group_by(granular_geodist) %>%
   summarise(avg_drop = mean(avg_drop))
 
-avg_drop_overall <- ggplot(data = avg_by_city_and_firm, 
-                           mapping = aes(x = rough_geodist, 
+avg_drop_total_no_zero <- avg_drop_total %>%
+  mutate(granular_geodist = ifelse(granular_geodist == 0, 0.001, granular_geodist))
+
+avg_drop_overall <- ggplot(data = avg_by_city_and_firm_granular, 
+                           mapping = aes(x = granular_geodist, 
                                          y = avg_drop,
                                          group = unique_sample)) +
-  geom_line(alpha = 0.2) +
+  geom_line(alpha = 0.1) +
   geom_line(data = avg_drop_total, 
-            mapping = aes(x = rough_geodist, 
+            mapping = aes(x = granular_geodist, 
                           y = avg_drop, 
                           group = 1), 
-            size = 1.2, 
-            color = r_col) +
+            size = 1, 
+            color = r_col,
+            linetype = "dashed") +
+  geom_point(data = avg_drop_total, 
+             mapping = aes(x = granular_geodist, 
+                           y = avg_drop, 
+                           group = 1), 
+             size = 2, 
+             color = r_col) +
+  geom_smooth(
+    data = avg_drop_total_no_zero,
+    mapping = aes(x = granular_geodist, 
+                  y = avg_drop,
+                  group = 1),
+    
+    method="glm", 
+    formula = y ~ I(log(x)),
+    se=FALSE, size=1, color = "#13D18F") +
   scale_x_continuous(
-    breaks = seq(0, max(avg_by_city_and_firm$rough_geodist), by = 2), 
+    breaks = seq(0, max(avg_by_city_and_firm_granular$granular_geodist), by = 2), 
     minor_breaks = NULL) +
   my_theme() +
   labs(
@@ -939,17 +980,69 @@ avg_drop_overall <- ggplot(data = avg_by_city_and_firm,
 
 avg_drop_overall
 
-if(save == T){ 
-  ggsave(
-    here::here("plots",
-               "avg_drop_overall-50cities.pdf"),
-    plot_to_save, 
-    width = 15, height = 15, device = cairo_pdf)
-}
+# if(save == T){ 
+#   ggsave(
+#     here::here("plots",
+#                "avg_drop_overall-50cities.pdf"),
+#     plot_to_save, 
+#     width = 15, height = 15, device = cairo_pdf)
+# }
 
 
 ```
 
+experimenting with fitting:
+
+```{r}
+# Experimenting with fitting the decay:
+
+# normalize btw 20 and 0:
+data_for_fit <- avg_drop_total_no_zero %>%
+  mutate(
+    avg_drop_norm = 0 + (((avg_drop - min(avg_drop)) * (20 - 0))  / (max(avg_drop) - min(avg_drop))),
+    avg_drop_translatd = avg_drop + 20
+  ) 
+
+# linearizing:
+fit1 = lm(avg_drop_translatd ~ granular_geodist, data = data_for_fit)
+summary(fit1)
+
+# exp decay
+y0 = min(data_for_fit$avg_drop_translatd)
+yf = max(data_for_fit$avg_drop_translatd)
+fit2 <- nls(avg_drop_translatd ~ yf + (y0 - yf) * exp(-alpha * granular_geodist), 
+            data = data_for_fit,
+            start = list(y0 = y0, yf = yf, alpha = 5),
+)
+summary(fit2)
+
+# asymptotic regression function (a self-starting function):
+fit3 <- nls(avg_drop_translatd ~ SSasymp(granular_geodist, yf, y0, log_alpha), data = data_for_fit)
+summary(fit3)
+
+
+
+tmp <- data_for_fit %>%
+  mutate(
+    pred1 = predict(fit1),
+    pred2 = predict(fit2),
+    pred3 = predict(fit3)
+  )
+
+ggplot(tmp, aes(x=granular_geodist, y = avg_drop_translatd)) +
+  geom_line(color = r_col) +
+  geom_line(aes(x=granular_geodist, y = pred1), color = "red") +
+  geom_line(aes(x=granular_geodist, y = pred2), color = "blue", linetype = "dashed", size=3) +
+  geom_line(aes(x=granular_geodist, y = pred3), color = "orange", linetype = "dashed") +
+  stat_smooth(method = "nls", formula = y ~ SSasymp(x, Asym, R0, lrc), se = FALSE, color = "black", linetype = "dashed") +
+  geom_smooth( 
+    method="glm", 
+    formula = y ~ I(log(x)),
+    se=FALSE, size=1, color = "#13D18F", linetype = "dashed") +
+  theme_minimal()
+
+
+```
 
 
 
@@ -970,7 +1063,7 @@ if(save == T){
 
 ## When are Law Firms Dropping Out of the Top 20?
 
-Google Maps shows 20 results on the first search page and Local Falcon does not collect the ranking above the top 20. We saw above that the ranking was dropping fast in the first mile, but also that not all the firms were dropping out of the top 20 after 10 miles. And this, in all cities, regardless of their area.  
+Google Maps shows 20 results on the first search page and Local Falcon does not collect the ranking above the topø 20. We saw above that the ranking was dropping fast in the first mile, but also that not all the firms were dropping out of the top 20 after 10 miles. And this, in all cities, regardless of their area.  
 
 For example, a 10-mile radius is enough to completely cover the city of Boston and its surroundings, but this is absolutely not the case in Los Angeles. However, in both cases, we identify companies that fall out of the top 20 after 5 or 10 miles and others that do not fall out of the top 20.  
 
