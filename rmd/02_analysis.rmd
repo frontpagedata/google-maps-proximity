@@ -885,15 +885,15 @@ avg_by_city_and_firm %>%
 
 
 
-### Exponential Decay?
+### The Drop Follows a Rule of Exponential Decay
 
 As we just saw, the drop in term of ranking has a similar shape in all cities. The drop seems to follow more or less a rule of [exponential decay](https://en.wikipedia.org/wiki/Exponential_decay): it decreases at a rate proportional to its current value. At first it decreases fast and then reach stability.  
 
-The _exponential decay function_ can be formalized like this: $Drop(d) = Drop0 * e^{-λd})$, where $Drop(d)$ is the drop at a distance $d$ and $λ$ is the decay constant.
+The _exponential decay function_ can be formalized like this: $Drop(d) = (Drop0 - DropFinal)* e^{-λd}) + DropFinal$, where $Drop(d)$ is the drop at a distance $d$ and $λ$ is the decay constant. $Drop0$ is the intercept, the drop at distance 0. The parameter $DropFinal$ is included as a "correction" because we work with negative values (the drops in position are -1, -2, etc.).  
 
 If we fit an _exponential decay function_ to the average, we estimate $λ$. If we have an estimate of $λ$, we can use the _exponential decay function_ to estimate the drop which would be expected, on average, at a certain distance $d$.  
 
-We start by illustrating the decay with all the samples taken in all cities, together. In order to get a better estimate of the exponential decay function, we average the data each tenth of a mile. In pink, we see the average drop in ranking regardless of the city:  
+We start by illustrating the decay with all the samples taken in all cities, together. In order to get a better estimate of the exponential decay function, we average the data each tenth of a mile. In pink, we see the average drop in ranking regardless of the city:   
 
 ````{r fig.align='center', fig.height=6, out.width='100%'}
 
@@ -955,18 +955,31 @@ avg_drop_overall
 
 ```
 
-Then we can fit an _exponential decay function_ to the average:  
+Then we can fit an _exponential decay function_ to the average, in green:   
 
 
 ```{r}
 
-# start here from avg_drop_total, 0 is OK, fit 
+# fitting the exp decay:
+y0 = max(avg_drop_total$avg_drop) # 0
+yf = min(avg_drop_total$avg_drop) # ~-14
+fit <- nls(avg_drop ~ yf + (y0 - yf) * exp(-alpha * granular_geodist), 
+           data = data_for_fit,
+           start = list(y0 = y0, yf = yf, alpha = 2.2) # <- estimated initial value to ease fitting
+)
+# summary(fit)
+
+# we can add the "fitted values" as a new column, 
+# those are the value of the model at each distance.
+avg_drop_total <- avg_drop_total %>%
+  mutate(exp_decay_pred = predict(fit))
 
 avg_drop_overall <- ggplot(data = avg_by_city_and_firm_granular, 
                            mapping = aes(x = granular_geodist, 
                                          y = avg_drop,
                                          group = unique_sample)) +
   geom_line(alpha = 0.1) +
+  # the average in pink:
   geom_line(data = avg_drop_total, 
             mapping = aes(x = granular_geodist, 
                           y = avg_drop, 
@@ -980,96 +993,175 @@ avg_drop_overall <- ggplot(data = avg_by_city_and_firm_granular,
                            group = 1), 
              size = 2, 
              color = r_col) +
+  # the fit in green:
+  geom_line(data = avg_drop_total, 
+            mapping = aes(x = granular_geodist, 
+                          y = exp_decay_pred, 
+                          group = 1), 
+            size = 1, 
+            color = "#13D18F") +
   scale_x_continuous(
     breaks = seq(0, max(avg_by_city_and_firm_granular$granular_geodist), by = 2), 
     minor_breaks = NULL) +
   my_theme() +
   labs(
     title = "Drop by Mile",
-    subtitle = "Each grey line is a sample (a law firm), all cities included.\nMeasurement are binned each tenth of a mile.\nThe average is shown in pink."
+    subtitle = "Each grey line is a sample (a law firm), all cities included.\nMeasurement are binned each tenth of a mile.\nThe average is shown in pink and the exponential decay fit in green."
   ) +
   xlab("Distance in miles to the location of the law firm") +
   ylab("Drop in the ranking\n(indexed at 0)")
 
 avg_drop_overall
 
-
 ```
 
+
+An _exponential decay function_ fits the average drop very well. The _decay constant_ $λ$ estimated by the fit is `coef(fit)[3]`. The other two constants are estimated as $Dropfinal$ = `coef(fit)[2]` and $Drop0$ = `coef(fit)[1]`. Note that the estimated drop at a distance of 0 mile is thus `coef(fit)[1]`, which is not perfect as we know that it should be 0.   
+
+We could use it to estimate the expected drop in ranking at any distance for an average law firm. For instance, the estimated drop at 1000 yards (0.59 mile) would be of $Drop(0.59) = (-2.1 - -11.9)* e^{-2.3 * 0.59}) - 11.9$ = -9.4 positions.  
+
+This is just an estimate based on an average. We see on the plots above that in reality law firms drop following all sort of trajectories, as illustrated by the plot being "filled" by black lines between 0 and -20. Note also that the caveat of having imputed missing "+20" measurements with the constant value of 25 is impacting the average and thus the fit, especially the final stabilized value of -11.9 for the drop.  
+
+Nevertheless, it is possible to fit such an exponential decay function separately for the averages in all cities. It would allow us to compute predictions of what the typical drop would look like in each city.     
 
 
 ```{r}
-# Experimenting with fitting the decay:
 
-# normalize btw 20 and 0:
-data_for_fit <- avg_drop_total_no_zero %>%
-  mutate(
-    avg_drop_norm = 0 + (((avg_drop - min(avg_drop)) * (20 - 0))  / (max(avg_drop) - min(avg_drop))),
-    avg_drop_translatd = avg_drop + 20
-  ) 
-
-data_for_fit <- avg_drop_total %>%
-  mutate(
-    avg_drop_norm =avg_drop,
-    avg_drop_translatd = avg_drop
-  )
-
-# linearizing:
-fit1 = lm(avg_drop_translatd ~ granular_geodist, data = data_for_fit)
-summary(fit1)
-
-# exp decay
-y0 = min(data_for_fit$avg_drop_translatd)
-yf = max(data_for_fit$avg_drop_translatd)
-fit2 <- nls(avg_drop_translatd ~ yf + (y0 - yf) * exp(-alpha * granular_geodist), 
-            data = data_for_fit,
-            start = list(y0 = y0, yf = yf, alpha = 5),
+# fitting the exp decay:
+y0 = max(avg_drop_total$avg_drop) # 0
+yf = min(avg_drop_total$avg_drop) # ~-14
+fit <- nls(avg_drop ~ yf + (y0 - yf) * exp(-alpha * granular_geodist), 
+           data = data_for_fit,
+           start = list(y0 = y0, yf = yf, alpha = 2.2) # <- estimated initial value to ease fitting
 )
-summary(fit2)
+# summary(fit)
 
-# asymptotic regression function (a self-starting function):
-fit3 <- nls(avg_drop_translatd ~ SSasymp(granular_geodist, yf, y0, log_alpha), data = data_for_fit)
-summary(fit3)
+# we can add the "fitted values" as a new column, 
+# those are the value of the model at each distance.
+avg_drop_total <- avg_drop_total %>%
+  mutate(exp_decay_pred = predict(fit))
 
+avg_drop_overall <- ggplot(data = avg_by_city_and_firm_granular, 
+                           mapping = aes(x = granular_geodist, 
+                                         y = avg_drop,
+                                         group = unique_sample)) +
+  geom_line(alpha = 0.1) +
+  # the average in pink:
+  geom_line(data = avg_drop_total, 
+            mapping = aes(x = granular_geodist, 
+                          y = avg_drop, 
+                          group = 1), 
+            size = 1, 
+            color = r_col,
+            linetype = "dashed") +
+  geom_point(data = avg_drop_total, 
+             mapping = aes(x = granular_geodist, 
+                           y = avg_drop, 
+                           group = 1), 
+             size = 2, 
+             color = r_col) +
+  # the fit in green:
+  geom_line(data = avg_drop_total, 
+            mapping = aes(x = granular_geodist, 
+                          y = exp_decay_pred, 
+                          group = 1), 
+            size = 1, 
+            color = "#13D18F") +
+  scale_x_continuous(
+    breaks = seq(0, max(avg_by_city_and_firm_granular$granular_geodist), by = 2), 
+    minor_breaks = NULL) +
+  my_theme() +
+  labs(
+    title = "Drop by Mile",
+    subtitle = "Each grey line is a sample (a law firm), all cities included.\nMeasurement are binned each tenth of a mile.\nThe average is shown in pink and the exponential decay fit in green."
+  ) +
+  xlab("Distance in miles to the location of the law firm") +
+  ylab("Drop in the ranking\n(indexed at 0)")
 
-
-tmp <- data_for_fit %>%
-  mutate(
-    pred1 = predict(fit1),
-    pred2 = predict(fit2),
-    pred3 = predict(fit3)
-  )
-
-ggplot(tmp, aes(x=granular_geodist, y = avg_drop_translatd)) +
-  geom_line(color = r_col) +
-  geom_line(aes(x=granular_geodist, y = pred1), color = "red") +
-  geom_line(aes(x=granular_geodist, y = pred2), color = "blue", linetype = "dashed", size=3) +
-  geom_line(aes(x=granular_geodist, y = pred3), color = "orange", linetype = "dashed") +
-  stat_smooth(method = "nls", formula = y ~ SSasymp(x, Asym, R0, lrc), se = FALSE, color = "black", linetype = "dashed") +
-  geom_smooth( 
-    method="glm", 
-    formula = y ~ I(log(x)),
-    se=FALSE, size=1, color = "#13D18F", linetype = "dashed") +
-  theme_minimal()
-
+avg_drop_overall
 
 ```
 
 
 
-&nbsp;  
+```{r, include=FALSE}
+# Experimenting with fitting the decay:
 
-&nbsp;  
+# # normalize btw 20 and 0:
+# data_for_fit <- avg_drop_total_no_zero %>%
+#   mutate(
+#     avg_drop_norm = 0 + (((avg_drop - min(avg_drop)) * (20 - 0))  / (max(avg_drop) - min(avg_drop))),
+#     avg_drop_translatd = avg_drop + 20
+#   ) 
+# 
+# data_for_fit <- avg_drop_total %>%
+#   mutate(
+#     avg_drop_norm =avg_drop,
+#     avg_drop_translatd = avg_drop
+#   )
+# 
+# # linearizing:
+# fit1 = lm(avg_drop_translatd ~ granular_geodist, data = data_for_fit)
+# summary(fit1)
+# 
+# # exp decay
+# y0 = min(data_for_fit$avg_drop_translatd)
+# yf = max(data_for_fit$avg_drop_translatd)
+# fit2 <- nls(avg_drop_translatd ~ yf + (y0 - yf) * exp(-alpha * granular_geodist), 
+#             data = data_for_fit,
+#             start = list(y0 = y0, yf = yf, alpha = 5),
+# )
+# summary(fit2)
+# 
+# # asymptotic regression function (a self-starting function):
+# fit3 <- nls(avg_drop_translatd ~ SSasymp(granular_geodist, yf, y0, log_alpha), data = data_for_fit)
+# summary(fit3)
+# 
+# 
+# 
+# tmp <- data_for_fit %>%
+#   mutate(
+#     pred1 = predict(fit1),
+#     pred2 = predict(fit2),
+#     pred3 = predict(fit3)
+#   )
+# 
+# ggplot(tmp, aes(x=granular_geodist, y = avg_drop_translatd)) +
+#   geom_line(color = r_col) +
+#   geom_line(aes(x=granular_geodist, y = pred1), color = "red") +
+#   geom_line(aes(x=granular_geodist, y = pred2), color = "blue", linetype = "dashed", size=3) +
+#   geom_line(aes(x=granular_geodist, y = pred3), color = "orange", linetype = "dashed") +
+#   stat_smooth(method = "nls", formula = y ~ SSasymp(x, Asym, R0, lrc), se = FALSE, color = "black", linetype = "dashed") +
+#   geom_smooth( 
+#     method="glm", 
+#     formula = y ~ I(log(x)),
+#     se=FALSE, size=1, color = "#13D18F", linetype = "dashed") +
+#   theme_minimal()
 
-**[HERE IS WHERE I AM]**   
 
-&nbsp;   
+```
 
-&nbsp;  
 
-==>  ADD HERE THE EXPONENTIAL DECAY FIT --
+```{r include=FALSE}
+#  average of the drop between all samples in all cities in a table:  
+avg_by_city_and_firm %>% 
+  group_by(rough_geodist) %>%
+  summarise(average_drop = mean(avg_drop)) %>%
+  select(`Distance to Firm (miles)` = rough_geodist, 
+         `Average Cumulative Drop (position)` = average_drop) %>%
+  kable(
+    format = "html",
+    digits = 1
+  ) %>% 
+  kable_styling(
+    bootstrap_options = 'condensed',
+    full_width = FALSE,
+    position = 'center'
+  )
 
-&nbsp;
+# Used this to determine the average drop in the first mile: ~-8 positions. 
+
+```
 
 
 ## When are Law Firms Dropping Out of the Top 20?
@@ -1078,7 +1170,7 @@ Google Maps shows 20 results on the first search page and Local Falcon does not 
 
 For example, a 10-mile radius is enough to completely cover the city of Boston and its surroundings, but this is absolutely not the case in Los Angeles. However, in both cases, we identify companies that fall out of the top 20 after 5 or 10 miles and others that do not fall out of the top 20.  
 
-How does the proportion of law firms out of the top 20 change with distance?  
+How does the proportion of law firms out of the top 20 change with distance?   
 
 We first have a look at New-York and Oklahoma-City:  
 
@@ -1233,11 +1325,11 @@ perc_out_of_top20 +
 
 The percentage of law firms which dropped out of the top 20 at the largest distance ranges from 27% in Pittsburgh to 92% in the Queens. 
 
-The cities are ordered by population size. It seems that the percentage of law firms which are able to remain in the top 20 is lower in largest cities.  
+The cities are ordered by population size. It seems that the percentage of law firms which are able to remain in the top 20 is lower in largest cities.    
 
-__This measure is likely an estimate of the competition in each city.__  
+__This measure is likely an estimate of the competition in each city.__   
 
-Note that these percentages are computed on 20 sample law firms. Please note also that the largest distance is not exactly the same in all cities. This differences are due to the precision of Local Falcon, geolocalization, and computation of geographical distance from coordinates.  
+Note that these percentages are computed on 20 sample law firms. Please note also that the largest distance is not exactly the same in all cities. These differences are due to the precision of Local Falcon, geolocalization, and computation of geographical distance from coordinates. 
 
 
 
@@ -1246,19 +1338,19 @@ Note that these percentages are computed on 20 sample law firms. Please note als
 
 # Summary and Key Observations
 
-As this analysis included a certain amount of uncertainty, in particular with regards to the variability of the results between each city and between each firm, we preferred to proceed in stages and offer Rankings.io preliminary analyses with the 10 largest cities.     
-
-We sampled 20 personal injury law firms in the 10 largest cities (10 with a radius of 5 miles, and 10 with a radius of 10 miles). For each, we measured their ranking for the keyword "car accident lawyer" at 225 locations disposed on a squared grid of 5/10 miles "radius" around the original location of the firm, using Local Falcon. We then compute the rankings and relative ranking (drop) of each law firm for each mile away from its location.  
+We sampled 20 personal injury law firms in the 50 largest U.S. cities. For each, we measured their ranking for the keyword "car accident lawyer" at 225 locations disposed on a squared grid of 10 miles "radius" around the original location of the firm, using Local Falcon (+ 10 samples with a radius of 5 miles for the 10 largest cities). We then compute the rankings and relative ranking (drop) of each law firm for each mile away from its location, as well as the percentage of the firms dropping out of the top 20 positions.  
 
 ## Key Observations 
 
-1. The ranking drops dramatically in the first mile; in all cities. On average, the drop in ranking in the first mile is -7.4 positions.   
+1. The ranking drops dramatically in the first mile; in all cities. On average, the drop in ranking in the first mile is of -8 positions.   
 
-2. The drop in ranking varies greatly between law firms. Some top-ranking firms do not even see a drop in the 10-mile radius. This means that there is probably no distance that would guarantee that all of the law firms in a given city drop out of the top 20.       
+2. The drop in ranking varies greatly between law firms. Some top-ranking firms do not even see a drop in the 10-mile radius. This means that there is probably no distance that would guarantee that all of the law firms in a given city drop out of the top 20. On the other hand, some law firms drop very quickly out of the top 20. Often, these are firms which already did not rank 1st at their own location.        
 
-3. After the quick drop, the average ranking stabilizes or decreases much slower. This effect is partly due to observation 2: we compute an average between law firms still ranking well and law firms which ranking is imputed to 21 because they are out of the top 20. This effect, albeit with some slight variations, is seen in all cities.     
+3. After the quick drop, the average ranking stabilizes or decreases much slower. This effect is partly due to observation 2: we compute an average between law firms still ranking well and law firms which ranking is imputed to 25 because they are out of the top 20. This effect, albeit with some slight variations, is seen in all cities.  
 
-4. The percentage of law firms that dropped out of the top 20 for each mile distance is varying between cities. For instance, it jumps to almost 40% in the first mile in Atlanta or Philadelphia, but never increases much more. On the contrary, it reaches almost 80% in Boston or Washington DC.     
+4. This drop in the ranking is following an _exponential decay rule_, and this rule could be used to estimate the expected drop for any firm in any city at any distance. Caveats: in reality the variance between the law firms is very large and this just an estimate of their average. Furthermore, this rule is based on imputing the value 25 to the "+20" ranks.         
+
+5. The percentage of law firms that dropped out of the top 20 for each mile distance is varying a lot between cities. For instance, it jumps to almost 40% in the first mile in Atlanta or Philadelphia, but never increases much more. On the contrary, it reaches almost 80% in Boston or Washington DC.     = likely  estimate of competition + can be used to compute prob of being in top 20 by mile in each city. 
 
 All these observations might have an impact on the current Rankings.io offer of a 5-mile geographic radius around a client’s headquarters to take more than one client in larger cities.   
 
