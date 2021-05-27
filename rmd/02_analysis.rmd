@@ -1,6 +1,6 @@
 ---
 title: "Google Maps Ranking - Proximity Study"
-author: "Preliminary Results, François Delavy"
+author: "François Delavy for Rankings.io"
 date: "Last updated on `r Sys.Date()`"
 output:
   html_document:
@@ -355,6 +355,7 @@ samples <- samples %>%
     rough_geodist = ifelse(is.na(rough_geodist), 0, rough_geodist), # the bin 0 is 0 instead of NA
     granular_geodist = cut(geodist_miles, breaks = seq(0, max(samples$geodist_miles)+1, 0.1), labels = FALSE)/10, # bin by 10th of a mile 
     granular_geodist = ifelse(is.na(granular_geodist), 0, granular_geodist), # the bin 0 is 0 instead of NA
+    rank = ifelse(rank == 21, 25, rank)
   ) %>%
   rowwise() %>%
   mutate(
@@ -480,7 +481,9 @@ avg_by_city_and_firm %>%
 
 From the latitude and longitude of each of the 225 measurements on the 15x15 grid, we compute the geographical distance to the location of the target law firm. We then average the ranking of a law firm by mile distance to its own location.  
 
-For instance, with our previous example in Miami, we see that the law firm ranked first at its own location (distance = 0 miles). The ranking drops quickly, and the average position of all the measurements taken between 0 and 1 miles average to ~9. The average rank stabilizes then around 18 as from the third mile already. Please note that we made the following choice: Local Falcon does not collect rankings above 20, they are just collected as "20+". In order to compute the average rankings, we impute these "20+" values to the value 21. This has an impact on the computation of the average ranking.   
+There is one major caveat of the data collected with 
+
+For instance, with our previous example in Miami, we see that the law firm ranked first at its own location (distance = 0 miles). The ranking drops quickly, and the average position of all the measurements taken between 0 and 1 miles average to ~9. The average rank stabilizes then around 18 as from the third mile already. Please note that we made the following choice: Local Falcon does not collect rankings above 20, they are just collected as "20+". In order to compute the average rankings, we impute these "20+" values to the value 25. This has an impact on the computation of the average ranking.   
 
 ```{r, fig.align='center', fig.height=5, out.width='80%'}
 
@@ -511,7 +514,7 @@ avg_by_city_and_firm %>%
 ```
 
 
-To obtain more stable measurements of the drop in ranking, we average the rankings from each law firm. That is the reason why we collectede 20 samples per city. 
+To obtain more stable measurements of the drop in ranking, we average the rankings from each law firm. This is the reason why we collected 20 samples per city. 
 
 
 # Observations
@@ -526,14 +529,21 @@ First, for the most populated and less populated city:
 
 two_cities <- avg_by_city_and_firm %>% 
   filter(City %in% c("New-York", "Oklahoma-City")) %>%
-  # mutate(avg_rank = ifelse(avg_rank == 21, NA, avg_rank)) %>%
+  mutate(avg_rank = ifelse(avg_rank > 20, 25, avg_rank)) %>%
+  mutate(seg_color = ifelse(avg_rank > 20, "orange", "black")) %>% # to color the +20 samples
   droplevels()
 
 rank_all_samples_2cities <- ggplot(data = two_cities, 
                                    mapping = aes(x = rough_geodist, 
                                                  y = avg_rank, 
-                                                 group = Sample)) +
+                                                 group = Sample,
+                                                 color = seg_color)
+                                   # color = factor(seg_color)
+                                   ) +
   geom_line(alpha = 0.4) +
+  geom_point(alpha = 0.4) +
+  # scale_color_manual(values = two_cities$seg_color) +
+  scale_color_identity() +
   # geom_point(alpha = 0.4, size = 0.2) +
   scale_y_reverse(breaks = c(1,5,10,15,20,21)) +
   scale_x_continuous(
@@ -557,7 +567,7 @@ if(save == T){
 }
 
 rank_all_samples_2cities +
-  facet_wrap(vars(City), ncol = 2) + 
+  facet_wrap(vars(City), ncol = 1) + 
   my_theme()
 
 ```
@@ -759,7 +769,7 @@ We see that the shape of the average rank by mile is similar between cities: it 
 
 
 
-## Drop from Initial Position (Relative Ranking)
+### Drop from Initial Position (Relative Ranking)
 
 In order to better compare the drop in ranking between law firms and cities, we can visualize their drop from their initial position - the relative ranking.  
 
@@ -925,7 +935,7 @@ avg_by_city_and_firm %>%
 
 
 
-## Exponential Decay?
+### Exponential Decay?
 
 As we just saw, the drop in term of ranking has the same shape in all cities. The drop seems to follow more or less a rule of [exponential decay](https://en.wikipedia.org/wiki/Exponential_decay): it decreases at a rate proportional to its current value. At first it decreases fast and then reach stability.  
 
