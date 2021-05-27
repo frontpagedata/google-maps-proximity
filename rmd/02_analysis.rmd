@@ -1,6 +1,6 @@
 ---
 title: "Google Maps Ranking - Proximity Study"
-author: "François Delavy for Rankings.io"
+author: "François Delavy and FrontPage Data for Rankings.io"
 date: "Last updated on `r Sys.Date()`"
 output:
   html_document:
@@ -85,8 +85,8 @@ for(i in required_packages) {
 
 
 ## save plots?
-save <- TRUE
-#save <- FALSE
+# save <- TRUE
+save <- FALSE
 
 ## quality of png's
 dpi <- 750
@@ -380,6 +380,14 @@ avg_by_city <- samples %>%
     seg_color = ifelse(avg_rank > 20, "orange", "black") # to color the +20 samples
   )
 
+# a table to store the values of the last geodist -> used to put label at the end of lines
+data_ends <- avg_by_city %>%
+  group_by(City) %>%
+  mutate(last_geodist = max(rough_geodist)) %>%
+  ungroup() %>%
+  filter(rough_geodist == last_geodist)
+
+
 # a tibble with an average by city and sample
 avg_by_city_and_firm <- samples %>%
   group_by(City, Sample, rough_geodist) %>%
@@ -492,9 +500,9 @@ avg_by_city_and_firm %>%
 
 From the latitude and longitude of each of the 225 measurements on the 15x15 grid, we compute the geographical distance to the location of the target law firm. We then average the ranking of a law firm by mile distance to its own location.  
 
-**There is a major caveat of the data collected with Local Falcon: Local Falcon does not collect rankings above 20** - the first page of search results; they are just collected as "20+". So, in order to numerically estimate the decline in ranking, for instance by computing the average rank at a certain distance from a law firm's localization, we need to impute the value of these missing ranks. For the sake of this study, **we assigned the value of 25 for all "20+" measurements**. This is not perfect and has an impact on the computation of the average ranking. Nevertheless, it still allows us to visualize this decline.   
+**There is a major caveat of the data collected with Local Falcon: Local Falcon does not collect rankings above 20** - the first page of search results; they are just collected as "20+". So, in order to numerically estimate the decline in ranking, for instance by computing the average rank at a certain distance from a law firm's localization, we need to impute the value of these missing ranks. For the sake of this study, **we assigned the value of 25 to all "20+" measurements**. This is not perfect and has an impact on the computation of the average ranking. Nevertheless, it still allows us to visualize this decline.   
 
-For instance, with our previous example in Miami, we see that the law firm ranked first at its own location (distance = 0 miles). The ranking drops quickly, and the average position of all the measurements taken between 0 and 1 miles average to ~9. The average rank oscillates then around 20 as from the third mile already. The further away from the location, the more often the firm's ranking is high or out of the top 20, as we used the value of 25 to for "+20", this is reflected in the average. We highlighted the average in orange when it was above 20. The law firms ranks mostly out of the top 20 there.    
+For instance, with our previous example in Miami, we see that the law firm ranked first at its own location (distance = 0 miles). The ranking drops quickly, and the average position of all the measurements taken between 0 and 1 miles average to ~9. The average rank oscillates then around 20 as from the third mile already. The further away from the location, the more often the firm's ranking is high or out of the top 20, as we used the value of 25 for "+20", this is reflected in the average. The average is in orange when above 20, i.e. where law firms rank mostly out of the top 20.    
 
 ```{r, fig.align='center', fig.height=5, out.width='80%'}
 
@@ -559,7 +567,7 @@ rank_all_samples_2cities <- ggplot(data = two_cities,
     minor_breaks = NULL) + 
   labs(
     title = "The Ranking Does Not Drop Equally for All Firms",
-    subtitle = "Some firms drop quickly out of the top 20, other don't.\nEach grey line is a sample (a law firm).\nA rank above 20 means '+20' and is shown in orange."
+    subtitle = "Some firms drop quickly out of the top 20, other don't.\nEach line is a sample (a law firm).\nA rank above 20 means '+20' and is shown in orange."
   ) +
   xlab("Distance in miles to the location of the law firm") +
   ylab("Ranking\n(average, binned by mile)")
@@ -575,7 +583,7 @@ if(save == T){
 }
 
 rank_all_samples_2cities +
-  facet_wrap(vars(City), ncol = 1) + 
+  facet_wrap(vars(City), ncol = 2) + 
   my_theme()
 
 ```
@@ -599,7 +607,7 @@ rank_all_samples <- ggplot(data = avg_by_city_and_firm,
     minor_breaks = NULL)
 # labs(
 #   title = "The Ranking Drops by Distance",
-#   subtitle = "However, the magnitude of the drop varies greatly between law firms: the highest ranking firms drop much less. \nEach grey line is a sample (a law firm).A rank of 21  means '+20': out of the top 20."
+#   subtitle = "However, the magnitude of the drop varies greatly between law firms: the highest ranking firms drop much less. \nEach line is a sample (a law firm).A rank of 21  means '+20': out of the top 20."
 # ) +
 # xlab("Distance in miles to the location of the law firm") +
 # ylab("Ranking (average, binned by mile)")
@@ -621,7 +629,7 @@ rank_all_samples +
 
 ```
 
-We observe that the patterns are slightly different between cities. There is nevertheless a consistency: the drop in ranking varies greatly between law firms. Some law firms do only see a small drop in their ranking, even at 5 or 10 miles from their location. Other law firm quickly drop out of the top 20 (showed in orange on the plot).    
+We observe that the patterns are slightly different between cities. There is nevertheless a consistency: the drop in ranking varies greatly between law firms. Some law firms do only see a small drop in their ranking, even at 5 or 10 miles from their location. Other law firms quickly drop out of the top 20 (showed in orange on the plot).    
 
 &nbsp;
 
@@ -650,7 +658,7 @@ rank_all_samples_2cities_avg <- ggplot(data = two_cities,
     minor_breaks = NULL) + 
   labs(
     title = "The Ranking Drops by Distance",
-    subtitle = "The magnitude of the drop varies greatly between law firms: the highest ranking firms drop much less. \nEach grey line is a sample (a law firm), and their average is in pink. \nA rank of 25  means '+20': out of the top 20 and is shown in orange."
+    subtitle = "The magnitude of the drop varies greatly between law firms: the highest ranking firms drop much less. \nEach line is a sample (a law firm), and their average is in pink. \nA rank of 25  means '+20' and is shown in orange."
   ) +
   xlab("Distance in miles to the location of the law firm") +
   ylab("Ranking\n(average, binned by mile)")
@@ -715,7 +723,7 @@ rank_all_samples_avg +
 
 The average rank across all law firms is shown in pink. We see that the shape of the average rank by mile is similar between cities: it drops fast in the first mile, and then slowly stabilizes.   
 
-It is computed with a rank of 25 for the firms out of the top 20 and for which the rank is not recorded anymore by Local Falcon. This is distorting the "true" average, which is unknown and likely lower at large miles. Another probable distortion is that the ranking is likely to "continuously" decline, and not stabilize at a certain value. The current impression of a stabilization of the mean is due to the constant value of 25 attributed to the "+20" measurements. Nevertheless, our method allows for a visualization of an estimate of the average drop in each cities. This estimate is just more precise for smaller distances.     
+It is computed with a rank of 25 for the firms out of the top 20 and for which the rank is not recorded anymore by Local Falcon. This is distorting the "true" average, which is unknown and likely lower at large miles. Another probable distortion is that the ranking is likely to "continuously" decline, and not stabilize at a certain value. The current impression of stabilization of the mean is due to the constant value of 25 attributed to the "+20" measurements. Nevertheless, our method allows for a visualization of an estimate of the average drop in each city. This estimate is just more precise for smaller distances.     
 
 
 
@@ -771,7 +779,7 @@ average_drop_2cities +
 Then, for all 50 cities:  
 
 
-```{r fig.align='center', fig.height=10, out.width='100%'}
+```{r fig.align='center', fig.height=12, out.width='100%'}
 
 average_drop_all_samples <- ggplot(data = avg_by_city_and_firm, 
                                    mapping = aes(x = rough_geodist, 
@@ -808,18 +816,12 @@ average_drop_all_samples +
 
 ```
 
-The drop is always 0 at the location of the firms. We observe that the shape of the drop, despite slight variations, is similar between cities.  
+The drop is always 0 at the location of the firms. We observe that the shape of the average drop, despite slight variations, is similar between cities.  
 
 We can superimpose all the drops in one single plot to show **the average drop in ranking in relation to the distance from the location of a firm for each city**:  
 
 
 ```{r fig.align='center', fig.height=4.5, out.width='100%'}
-
-data_ends <- avg_by_city %>%
-  group_by(City) %>%
-  mutate(last_geodist = max(rough_geodist)) %>%
-  ungroup() %>%
-  filter(rough_geodist == last_geodist)
 
 
 avg_drop_for_all_cities <- ggplot(data = avg_by_city, 
@@ -859,7 +861,7 @@ if(save == T){
 
 ```
 
-Note that, again, the average is computed with a constant value of "25" for the samples out of the top 20. This explains the stabilization of the curve at large distances. Nevertheless, all cities see a drop of -5 to -12 in the average ranking of the law firms in the first mile. The drop seems to be larger in the Queens than in New-Orleans.    
+Note that, again, the average is computed with a constant value of "25" for the samples out of the top 20. This explains the stabilization of the curve at large distances. Nevertheless, all cities see a drop of -5 to -12 in the average ranking of the law firms in the first mile. The drop seems to be larger in the Queens than in New Orleans.    
 
 
 ```{r include=FALSE}
@@ -887,11 +889,15 @@ avg_by_city_and_firm %>%
 
 ### The Drop Follows a Rule of Exponential Decay
 
-As we just saw, the drop in term of ranking has a similar shape in all cities. The drop seems to follow more or less a rule of [exponential decay](https://en.wikipedia.org/wiki/Exponential_decay): it decreases at a rate proportional to its current value. At first it decreases fast and then reach stability.  
+As we just saw, the drop in terms of ranking has a similar shape in all cities. The drop seems to follow more or less a rule of [exponential decay](https://en.wikipedia.org/wiki/Exponential_decay): it decreases at a rate proportional to its current value. At first, it decreases fast and then reaches stability.  
 
-The _exponential decay function_ can be formalized like this: $Drop(d) = (Drop0 - DropFinal)* e^{-λd}) + DropFinal$, where $Drop(d)$ is the drop at a distance $d$ and $λ$ is the decay constant. $Drop0$ is the intercept, the drop at distance 0. The parameter $DropFinal$ is included as a "correction" because we work with negative values (the drops in position are -1, -2, etc.).  
+The _exponential decay function_ can be formalized like this:   
 
-If we fit an _exponential decay function_ to the average, we estimate $λ$. If we have an estimate of $λ$, we can use the _exponential decay function_ to estimate the drop which would be expected, on average, at a certain distance $d$.  
+$Drop(d) = (Drop0 - DropFinal)* e^{-λd} + DropFinal$  
+
+Where $Drop(d)$ is the drop at a distance $d$ and $λ$ is the decay constant. $Drop0$ is the intercept, the drop at distance 0. The parameter $DropFinal$ is included as a "correction" because we work with negative values (the drops in position are encoded as "-1", "-2", etc.).  
+
+When fitting an _exponential decay function_ to the average, we estimate $λ$. If we have an estimate of $λ$, we can use the _exponential decay function_ to estimate the drop which would be expected, on average, at a certain distance $d$.  
 
 We start by illustrating the decay with all the samples taken in all cities, together. In order to get a better estimate of the exponential decay function, we average the data each tenth of a mile. In pink, we see the average drop in ranking regardless of the city:   
 
@@ -901,8 +907,8 @@ avg_drop_total <- avg_by_city_and_firm_granular %>%
   group_by(granular_geodist) %>%
   summarise(avg_drop = mean(avg_drop))
 
-avg_drop_total_no_zero <- avg_drop_total %>%
-  mutate(granular_geodist = ifelse(granular_geodist == 0, 0.001, granular_geodist))
+# avg_drop_total_no_zero <- avg_drop_total %>%
+#   mutate(granular_geodist = ifelse(granular_geodist == 0, 0.001, granular_geodist))
 
 avg_drop_overall <- ggplot(data = avg_by_city_and_firm_granular, 
                            mapping = aes(x = granular_geodist, 
@@ -913,9 +919,8 @@ avg_drop_overall <- ggplot(data = avg_by_city_and_firm_granular,
             mapping = aes(x = granular_geodist, 
                           y = avg_drop, 
                           group = 1), 
-            size = 1, 
-            color = r_col,
-            linetype = "dashed") +
+            size = 0.2, 
+            color = r_col) +
   geom_point(data = avg_drop_total, 
              mapping = aes(x = granular_geodist, 
                            y = avg_drop, 
@@ -936,7 +941,7 @@ avg_drop_overall <- ggplot(data = avg_by_city_and_firm_granular,
     minor_breaks = NULL) +
   my_theme() +
   labs(
-    title = "Drop by Mile",
+    title = "The Average Drop, Over All 1100 Samples",
     subtitle = "Each grey line is a sample (a law firm), all cities included.\nMeasurement are binned each tenth of a mile.\nThe average is shown in pink."
   ) +
   xlab("Distance in miles to the location of the law firm") +
@@ -958,13 +963,13 @@ avg_drop_overall
 Then we can fit an _exponential decay function_ to the average, in green:   
 
 
-```{r}
+```{r fig.align='center', fig.height=8, out.width='100%'}
 
 # fitting the exp decay:
 y0 = max(avg_drop_total$avg_drop) # 0
 yf = min(avg_drop_total$avg_drop) # ~-14
 fit <- nls(avg_drop ~ yf + (y0 - yf) * exp(-alpha * granular_geodist), 
-           data = data_for_fit,
+           data = avg_drop_total,
            start = list(y0 = y0, yf = yf, alpha = 2.2) # <- estimated initial value to ease fitting
 )
 # summary(fit)
@@ -980,13 +985,12 @@ avg_drop_overall <- ggplot(data = avg_by_city_and_firm_granular,
                                          group = unique_sample)) +
   geom_line(alpha = 0.1) +
   # the average in pink:
-  geom_line(data = avg_drop_total, 
-            mapping = aes(x = granular_geodist, 
-                          y = avg_drop, 
-                          group = 1), 
-            size = 1, 
-            color = r_col,
-            linetype = "dashed") +
+  geom_line(data = avg_drop_total,
+            mapping = aes(x = granular_geodist,
+                          y = avg_drop,
+                          group = 1),
+            size = 0.2,
+            color = r_col) +
   geom_point(data = avg_drop_total, 
              mapping = aes(x = granular_geodist, 
                            y = avg_drop, 
@@ -998,14 +1002,14 @@ avg_drop_overall <- ggplot(data = avg_by_city_and_firm_granular,
             mapping = aes(x = granular_geodist, 
                           y = exp_decay_pred, 
                           group = 1), 
-            size = 1, 
+            size = 1.5, 
             color = "#13D18F") +
   scale_x_continuous(
     breaks = seq(0, max(avg_by_city_and_firm_granular$granular_geodist), by = 2), 
     minor_breaks = NULL) +
   my_theme() +
   labs(
-    title = "Drop by Mile",
+    title = "Average Drop Follows Exponential Decay Rule",
     subtitle = "Each grey line is a sample (a law firm), all cities included.\nMeasurement are binned each tenth of a mile.\nThe average is shown in pink and the exponential decay fit in green."
   ) +
   xlab("Distance in miles to the location of the law firm") +
@@ -1016,71 +1020,13 @@ avg_drop_overall
 ```
 
 
-An _exponential decay function_ fits the average drop very well. The _decay constant_ $λ$ estimated by the fit is `coef(fit)[3]`. The other two constants are estimated as $Dropfinal$ = `coef(fit)[2]` and $Drop0$ = `coef(fit)[1]`. Note that the estimated drop at a distance of 0 mile is thus `coef(fit)[1]`, which is not perfect as we know that it should be 0.   
+An _exponential decay function_ fits the average drop very well. The _decay constant_ $λ$ estimated by the fit is `r round(coef(fit)[3],1)`. The other two constants are estimated as $Dropfinal$ = `r round(coef(fit)[2],1)` and $Drop0$ = `r round(coef(fit)[1],1)`. Note that the estimated drop at a distance of 0 mile is thus `r round(coef(fit)[1],1)`, which is not perfect as we know that it should be 0.   
 
-We could use it to estimate the expected drop in ranking at any distance for an average law firm. For instance, the estimated drop at 1000 yards (0.59 mile) would be of $Drop(0.59) = (-2.1 - -11.9)* e^{-2.3 * 0.59}) - 11.9$ = -9.4 positions.  
+We could use it to estimate the expected drop in ranking at any distance for an average law firm. For instance, the estimated drop at 1000 yards (0.59 mile) would be of $Drop(0.59) = (-2.1 + 11.9)* e^{-2.3 * 0.59}) - 11.9$ = -9.4 positions.  
 
 This is just an estimate based on an average. We see on the plots above that in reality law firms drop following all sort of trajectories, as illustrated by the plot being "filled" by black lines between 0 and -20. Note also that the caveat of having imputed missing "+20" measurements with the constant value of 25 is impacting the average and thus the fit, especially the final stabilized value of -11.9 for the drop.  
 
 Nevertheless, it is possible to fit such an exponential decay function separately for the averages in all cities. It would allow us to compute predictions of what the typical drop would look like in each city.     
-
-
-```{r}
-
-# fitting the exp decay:
-y0 = max(avg_drop_total$avg_drop) # 0
-yf = min(avg_drop_total$avg_drop) # ~-14
-fit <- nls(avg_drop ~ yf + (y0 - yf) * exp(-alpha * granular_geodist), 
-           data = data_for_fit,
-           start = list(y0 = y0, yf = yf, alpha = 2.2) # <- estimated initial value to ease fitting
-)
-# summary(fit)
-
-# we can add the "fitted values" as a new column, 
-# those are the value of the model at each distance.
-avg_drop_total <- avg_drop_total %>%
-  mutate(exp_decay_pred = predict(fit))
-
-avg_drop_overall <- ggplot(data = avg_by_city_and_firm_granular, 
-                           mapping = aes(x = granular_geodist, 
-                                         y = avg_drop,
-                                         group = unique_sample)) +
-  geom_line(alpha = 0.1) +
-  # the average in pink:
-  geom_line(data = avg_drop_total, 
-            mapping = aes(x = granular_geodist, 
-                          y = avg_drop, 
-                          group = 1), 
-            size = 1, 
-            color = r_col,
-            linetype = "dashed") +
-  geom_point(data = avg_drop_total, 
-             mapping = aes(x = granular_geodist, 
-                           y = avg_drop, 
-                           group = 1), 
-             size = 2, 
-             color = r_col) +
-  # the fit in green:
-  geom_line(data = avg_drop_total, 
-            mapping = aes(x = granular_geodist, 
-                          y = exp_decay_pred, 
-                          group = 1), 
-            size = 1, 
-            color = "#13D18F") +
-  scale_x_continuous(
-    breaks = seq(0, max(avg_by_city_and_firm_granular$granular_geodist), by = 2), 
-    minor_breaks = NULL) +
-  my_theme() +
-  labs(
-    title = "Drop by Mile",
-    subtitle = "Each grey line is a sample (a law firm), all cities included.\nMeasurement are binned each tenth of a mile.\nThe average is shown in pink and the exponential decay fit in green."
-  ) +
-  xlab("Distance in miles to the location of the law firm") +
-  ylab("Drop in the ranking\n(indexed at 0)")
-
-avg_drop_overall
-
-```
 
 
 
@@ -1238,11 +1184,11 @@ perc_out_of_top20_two_cities +
 
 ```
 
-There is a radical difference here. The percentage of law firms which dropped out of the top 20 rises to 80% in New York, after around 10 miles. Whereas in Oklahoma city, this number never rises above 30%; a larger proportion of law firms rank well, even at large distances.   
+There is a radical difference here. The percentage of law firms that dropped out of the top 20 rises to 80% in New York, after around 10 miles. Whereas in Oklahoma city, this number never rises above 30%; a larger proportion of law firms rank well, even at large distances.   
 
-Then, for all the 50 largest U.S. cities:  
+The same figure, for all the 50 largest U.S. cities:  
 
-```{r fig.align='center', fig.height=12, out.width='100%'}
+```{r fig.align='center', fig.height=13, out.width='100%'}
 
 perc_out_of_top20 <- ggplot(data = avg_by_city, 
                             mapping = aes(x = rough_geodist, 
@@ -1323,9 +1269,9 @@ perc_out_of_top20 +
 
 ```
 
-The percentage of law firms which dropped out of the top 20 at the largest distance ranges from 27% in Pittsburgh to 92% in the Queens. 
+The percentage of law firms that dropped out of the top 20 at the largest distance ranges from 27% in Pittsburgh to 92% in Queens. 
 
-The cities are ordered by population size. It seems that the percentage of law firms which are able to remain in the top 20 is lower in largest cities.    
+The cities are ordered by population size. It seems that the percentage of law firms that are able to remain in the top 20 is lower in the largest cities.    
 
 __This measure is likely an estimate of the competition in each city.__   
 
@@ -1338,21 +1284,23 @@ Note that these percentages are computed on 20 sample law firms. Please note als
 
 # Summary and Key Observations
 
-We sampled 20 personal injury law firms in the 50 largest U.S. cities. For each, we measured their ranking for the keyword "car accident lawyer" at 225 locations disposed on a squared grid of 10 miles "radius" around the original location of the firm, using Local Falcon (+ 10 samples with a radius of 5 miles for the 10 largest cities). We then compute the rankings and relative ranking (drop) of each law firm for each mile away from its location, as well as the percentage of the firms dropping out of the top 20 positions.  
+We sampled 20 personal injury law firms in the 50 largest U.S. cities. For each, we measured their ranking for the keyword "car accident lawyer" at 225 locations disposed on a squared grid of 10 miles "radius" around the original location of the firm, using Local Falcon (+ 10 samples with a radius of 5 miles for the 10 largest cities).   
+
+We then compute the rankings and relative ranking (drop) of each law firm for each mile away from its location, as well as the percentage of the firms dropping out of the top 20 positions.  
 
 ## Key Observations 
 
-1. The ranking drops dramatically in the first mile; in all cities. On average, the drop in ranking in the first mile is of -8 positions.   
+1. __The ranking drops dramatically in the first mile__; in all cities. On average, the drop in ranking in the first mile is -8 positions.   
 
-2. The drop in ranking varies greatly between law firms. Some top-ranking firms do not even see a drop in the 10-mile radius. This means that there is probably no distance that would guarantee that all of the law firms in a given city drop out of the top 20. On the other hand, some law firms drop very quickly out of the top 20. Often, these are firms which already did not rank 1st at their own location.        
+2. __The drop in ranking varies greatly between law firms. Some top-ranking firms do not even see a drop__ in the 10-mile radius. This means that there is probably no distance that would guarantee that all of the law firms in a given city drop out of the top 20. __On the other hand, some law firms drop very quickly out of the top 20__. Often, these are firms that already did not rank 1st at their own location.        
 
 3. After the quick drop, the average ranking stabilizes or decreases much slower. This effect is partly due to observation 2: we compute an average between law firms still ranking well and law firms which ranking is imputed to 25 because they are out of the top 20. This effect, albeit with some slight variations, is seen in all cities.  
 
-4. This drop in the ranking is following an _exponential decay rule_, and this rule could be used to estimate the expected drop for any firm in any city at any distance. Caveats: in reality the variance between the law firms is very large and this just an estimate of their average. Furthermore, this rule is based on imputing the value 25 to the "+20" ranks.         
+4. This drop in the ranking is following an _exponential decay rule_, and this rule could be used to estimate the expected drop for any firm in any city at any distance. Caveats: in reality, the variance between the law firms is very large and this just an estimate of their average. Furthermore, this rule is based on imputing the value 25 to the "+20" ranks.         
 
-5. The percentage of law firms that dropped out of the top 20 for each mile distance is varying a lot between cities. For instance, it jumps to almost 40% in the first mile in Atlanta or Philadelphia, but never increases much more. On the contrary, it reaches almost 80% in Boston or Washington DC.     = likely  estimate of competition + can be used to compute prob of being in top 20 by mile in each city. 
+5. __The percentage of law firms that dropped out of the top 20 for each mile distance varies a lot between cities__. In most cities, the largest increase of law firms dropping out of the top 20 is taking place in the first mile. The maximum of companies out of the top 20 varies dramatically between cities, ranging from 27% in Pittsburgh to 92% in Queens. These percentages can be used to estimate the probability of a law firm to rank in (or out) of the top 20 in each city, at each mile. __These results are likely a reflection of the competition among personal injury lawyers in each city__.   
 
-All these observations might have an impact on the current Rankings.io offer of a 5-mile geographic radius around a client’s headquarters to take more than one client in larger cities.   
+All these observations might have an impact on the current Rankings.io offer of a 5-mile geographic radius around a client’s headquarters to take more than one client in larger cities. They also show the benefit of opening several offices in large cities, as the ranking is dropping fast by distance.    
 
 
 
