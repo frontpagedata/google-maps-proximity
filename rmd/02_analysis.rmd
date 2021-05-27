@@ -355,7 +355,7 @@ samples <- samples %>%
     rough_geodist = ifelse(is.na(rough_geodist), 0, rough_geodist), # the bin 0 is 0 instead of NA
     granular_geodist = cut(geodist_miles, breaks = seq(0, max(samples$geodist_miles)+1, 0.1), labels = FALSE)/10, # bin by 10th of a mile 
     granular_geodist = ifelse(is.na(granular_geodist), 0, granular_geodist), # the bin 0 is 0 instead of NA
-    rank = ifelse(rank == 21, 25, rank)
+    rank = ifelse(rank == 21, 25, rank) # we use 25 to code missing values, instead of 21 -> better visibility, better highlight of difference.
   ) %>%
   rowwise() %>%
   mutate(
@@ -375,7 +375,9 @@ avg_by_city <- samples %>%
   ) %>%
   ungroup() %>%
   mutate(
-    percentage_out_of_top20 = (n_samples_out_of_top20 / n_samples)
+    percentage_out_of_top20 = (n_samples_out_of_top20 / n_samples),
+    # avg_rank = ifelse(avg_rank > 20, 25, avg_rank), # we do not force 25 to +20 averages
+    seg_color = ifelse(avg_rank > 20, "orange", "black") # to color the +20 samples
   )
 
 # a tibble with an average by city and sample
@@ -389,6 +391,8 @@ avg_by_city_and_firm <- samples %>%
   ungroup() %>%
   mutate(
     percentage_out_of_top20 = (n_samples_out_of_top20 / n_samples),
+    # avg_rank = ifelse(avg_rank > 20, 25, avg_rank), # we do not force 25 to +20 averages
+    seg_color = ifelse(avg_rank > 20, "orange", "black") # to color the +20 samples
   ) %>%
   rowwise() %>%
   mutate(
@@ -408,7 +412,9 @@ avg_by_firm <- samples %>%
   ) %>%
   ungroup() %>%
   mutate(
-    percentage_out_of_top20 = (n_samples_out_of_top20 / n_samples)
+    percentage_out_of_top20 = (n_samples_out_of_top20 / n_samples),
+    # avg_rank = ifelse(avg_rank > 20, 25, avg_rank), # we do not force 25 to +20 averages
+    seg_color = ifelse(avg_rank > 20, "orange", "black") # to color the +20 samples
   )
 
 
@@ -424,6 +430,8 @@ avg_by_city_and_firm_granular <- samples %>%
   ungroup() %>%
   mutate(
     percentage_out_of_top20 = (n_samples_out_of_top20 / n_samples),
+    # avg_rank = ifelse(avg_rank > 20, 25, avg_rank), # we do not force 25 to +20 averages
+    seg_color = ifelse(avg_rank > 20, "orange", "black") # to color the +20 samples
   ) %>%
   rowwise() %>%
   mutate(
@@ -468,9 +476,12 @@ Most of the 1100 law firms rank 1st at their own location (56%).
 avg_by_city_and_firm %>% 
   filter(rough_geodist == 0) %>%
   count(avg_rank) %>%
-  mutate(initial_rank_in_perc = n/sum(n)) %>%
-  ggplot(aes(x = avg_rank, y = initial_rank_in_perc)) +
+  mutate(initial_rank_in_perc = n/sum(n),
+         seg_color = ifelse(avg_rank > 20, "orange", "black") # to color the +20 samples
+  ) %>%
+  ggplot(aes(x = avg_rank, y = initial_rank_in_perc, fill = seg_color)) +
   geom_col() +
+  scale_fill_identity() +
   scale_y_continuous(labels = scales::percent) +
   xlab("Rank at own location") +
   ylab("Percentage of law firms")
@@ -481,29 +492,26 @@ avg_by_city_and_firm %>%
 
 From the latitude and longitude of each of the 225 measurements on the 15x15 grid, we compute the geographical distance to the location of the target law firm. We then average the ranking of a law firm by mile distance to its own location.  
 
-There is one major caveat of the data collected with 
+**There is a major caveat of the data collected with Local Falcon: Local Falcon does not collect rankings above 20** - the first page of search results; they are just collected as "20+". So, in order to numerically estimate the decline in ranking, for instance by computing the average rank at a certain distance from a law firm's localization, we need to impute the value of these missing ranks. For the sake of this study, **we assigned the value of 25 for all "20+" measurements**. This is not perfect and has an impact on the computation of the average ranking. Nevertheless, it still allows us to visualize this decline.   
 
-For instance, with our previous example in Miami, we see that the law firm ranked first at its own location (distance = 0 miles). The ranking drops quickly, and the average position of all the measurements taken between 0 and 1 miles average to ~9. The average rank stabilizes then around 18 as from the third mile already. Please note that we made the following choice: Local Falcon does not collect rankings above 20, they are just collected as "20+". In order to compute the average rankings, we impute these "20+" values to the value 25. This has an impact on the computation of the average ranking.   
+For instance, with our previous example in Miami, we see that the law firm ranked first at its own location (distance = 0 miles). The ranking drops quickly, and the average position of all the measurements taken between 0 and 1 miles average to ~9. The average rank oscillates then around 20 as from the third mile already. The further away from the location, the more often the firm's ranking is high or out of the top 20, as we used the value of 25 to for "+20", this is reflected in the average. We highlighted the average in orange when it was above 20. The law firms ranks mostly out of the top 20 there.    
 
 ```{r, fig.align='center', fig.height=5, out.width='80%'}
 
 avg_by_city_and_firm %>% 
   filter(City == "Miami",
          Sample == "12") %>%
-  ggplot(mapping = aes(x = rough_geodist, y = avg_rank)) +
-  geom_point() +
-  geom_line() + 
+  ggplot(mapping = aes(x = rough_geodist, y = avg_rank, color = seg_color, group = 1)) +
+  geom_point(size = 2) +
+  geom_line(color = "black", linetype = "dashed") + 
+  scale_color_identity() + 
   scale_y_reverse(
-    breaks = seq(1,round(max(avg_by_city_and_firm$avg_rank)), by = 2)
+    breaks = c(1,5,10,15,20,25)
   ) +
   # scale_y_reverse() +
   scale_x_continuous(
     breaks = seq(0,max(avg_by_city_and_firm$rough_geodist), by = 1), 
     minor_breaks = NULL) + 
-  # labs(
-  #   title = "The average drop in position",
-  #   subtitle = "The ranking drops dramatically in the first mile. Distances are binned by mile."
-  # ) +
   xlab("Distance in miles to the location of the law firm") +
   ylab("Ranking\n(average, binned by mile)") +
   annotate(geom = "text", x=4, y=1, 
@@ -529,8 +537,8 @@ First, for the most populated and less populated city:
 
 two_cities <- avg_by_city_and_firm %>% 
   filter(City %in% c("New-York", "Oklahoma-City")) %>%
-  mutate(avg_rank = ifelse(avg_rank > 20, 25, avg_rank)) %>%
-  mutate(seg_color = ifelse(avg_rank > 20, "orange", "black")) %>% # to color the +20 samples
+  # mutate(avg_rank = ifelse(avg_rank > 20, 25, avg_rank)) %>%
+  # mutate(seg_color = ifelse(avg_rank > 20, "orange", "black")) %>% # to color the +20 samples
   droplevels()
 
 rank_all_samples_2cities <- ggplot(data = two_cities, 
@@ -539,19 +547,19 @@ rank_all_samples_2cities <- ggplot(data = two_cities,
                                                  group = Sample,
                                                  color = seg_color)
                                    # color = factor(seg_color)
-                                   ) +
+) +
   geom_line(alpha = 0.4) +
   geom_point(alpha = 0.4) +
   # scale_color_manual(values = two_cities$seg_color) +
   scale_color_identity() +
   # geom_point(alpha = 0.4, size = 0.2) +
-  scale_y_reverse(breaks = c(1,5,10,15,20,21)) +
+  scale_y_reverse(breaks = c(1,5,10,15,20,25)) +
   scale_x_continuous(
     breaks = seq(0,max(avg_by_city_and_firm$rough_geodist), by = 2), 
     minor_breaks = NULL) + 
   labs(
-    title = "The Ranking Drops by Distance",
-    subtitle = "The magnitude of the drop varies greatly between law firms: the highest ranking firms drop much less. \nEach grey line is a sample (a law firm). A rank of 21  means '+20': out of the top 20."
+    title = "The Ranking Does Not Drop Equally for All Firms",
+    subtitle = "Some firms drop quickly out of the top 20, other don't.\nEach grey line is a sample (a law firm).\nA rank above 20 means '+20' and is shown in orange."
   ) +
   xlab("Distance in miles to the location of the law firm") +
   ylab("Ranking\n(average, binned by mile)")
@@ -580,9 +588,11 @@ Then, for all 50 largest US cities:
 rank_all_samples <- ggplot(data = avg_by_city_and_firm, 
                            mapping = aes(x = rough_geodist, 
                                          y = avg_rank, 
-                                         group = Sample)) +
+                                         group = Sample,
+                                         color = seg_color)) +
   geom_line(alpha = 0.4) +
   # geom_point(alpha = 0.4, size = 0.2) +
+  scale_color_identity() +
   scale_y_reverse() +
   scale_x_continuous(
     breaks = seq(0,max(avg_by_city_and_firm$rough_geodist), by = 2), 
@@ -611,7 +621,7 @@ rank_all_samples +
 
 ```
 
-We observe that the patterns are slightly different between cities. There is nevertheless a consistency: the drop in ranking varies greatly between law firms. Some law firms do only see a small drop in their ranking, even at 5 or 10 miles from their location. Other law firm quickly drop out of the top 20 (showed as 21 on the plot).    
+We observe that the patterns are slightly different between cities. There is nevertheless a consistency: the drop in ranking varies greatly between law firms. Some law firms do only see a small drop in their ranking, even at 5 or 10 miles from their location. Other law firm quickly drop out of the top 20 (showed in orange on the plot).    
 
 &nbsp;
 
@@ -622,8 +632,10 @@ Because there is a high variability between the law firms, it is useful to show 
 rank_all_samples_2cities_avg <- ggplot(data = two_cities, 
                                        mapping = aes(x = rough_geodist, 
                                                      y = avg_rank, 
-                                                     group = Sample)) +
+                                                     group = Sample,
+                                                     color = seg_color)) +
   geom_line(alpha = 0.4) +
+  scale_color_identity() + 
   # geom_point(alpha = 0.4, size = 0.2) +
   geom_line(data = (avg_by_city %>% 
                       filter(City %in% c("New-York", "Oklahoma-City"))), 
@@ -632,13 +644,13 @@ rank_all_samples_2cities_avg <- ggplot(data = two_cities,
                           group = 1), 
             size = 1.2, 
             color = r_col) +
-  scale_y_reverse(breaks = c(1,5,10,15,20,21)) +
+  scale_y_reverse(breaks = c(1,5,10,15,20,25)) +
   scale_x_continuous(
     breaks = seq(0,max(avg_by_city_and_firm$rough_geodist), by = 2), 
     minor_breaks = NULL) + 
   labs(
     title = "The Ranking Drops by Distance",
-    subtitle = "The magnitude of the drop varies greatly between law firms: the highest ranking firms drop much less. \nEach grey line is a sample (a law firm), and their average is in pink. \nA rank of 21  means '+20': out of the top 20."
+    subtitle = "The magnitude of the drop varies greatly between law firms: the highest ranking firms drop much less. \nEach grey line is a sample (a law firm), and their average is in pink. \nA rank of 25  means '+20': out of the top 20 and is shown in orange."
   ) +
   xlab("Distance in miles to the location of the law firm") +
   ylab("Ranking\n(average, binned by mile)")
@@ -667,7 +679,8 @@ And for all 50 cities:
 rank_all_samples_avg <- ggplot(data = avg_by_city_and_firm, 
                                mapping = aes(x = rough_geodist, 
                                              y = avg_rank, 
-                                             group = Sample)) +
+                                             group = Sample,
+                                             color = seg_color)) +
   geom_line(alpha = 0.4) +
   # geom_point(alpha = 0.4, size = 0.2) +
   geom_line(data = avg_by_city, 
@@ -677,6 +690,7 @@ rank_all_samples_avg <- ggplot(data = avg_by_city_and_firm,
             size = 1.2, 
             color = r_col) +
   scale_y_reverse() +
+  scale_color_identity() +
   scale_x_continuous(
     breaks = seq(0,max(avg_by_city_and_firm$rough_geodist), by = 2), 
     minor_breaks = NULL)
@@ -699,79 +713,15 @@ rank_all_samples_avg +
 ```
 
 
-The average rank across all law firms is shown in pink. It is computed with a rank of 21 for the firms out of the top 20 and for which the rank is not recorded anymore by Local Falcon. This is distorting the "true" average, which is likely lower at large miles.    
+The average rank across all law firms is shown in pink. We see that the shape of the average rank by mile is similar between cities: it drops fast in the first mile, and then slowly stabilizes.   
 
-We see that the shape of the average rank by mile is similar between cities: it drops fast in the first mile, and then slowly stabilizes.   
-
-```{r, fig.align='center', fig.height=20, out.width='100%', include=FALSE}
-
-# # geom_smooth LOG
-# 
-# samples_without_21 <- samples %>%
-#   mutate(
-#     # rank = ifelse(rank == 21, NA, rank),
-#     low_res_dist = round(geodist_miles,1)) %>%
-#   group_by(City, Sample, low_res_dist) %>%
-#   summarise(avg_rank = mean(rank)) %>%
-#   mutate( # to help with log(0) = -Inf
-#     low_res_dist = ifelse(low_res_dist == 0, 0.001, low_res_dist)
-#   ) %>%
-#   mutate(avg_rank = ifelse(avg_rank == 21, 21, avg_rank))
-# 
-# 
-# ggplot(data = samples_without_21 %>% filter(City == "New-York")) +
-#   geom_line(mapping = aes(x = low_res_dist, y = avg_rank, group = Sample), 
-#             alpha = 0.4) +
-#   geom_point(mapping = aes(x = low_res_dist, y = avg_rank, group = Sample)) +
-#   geom_smooth(mapping = aes(x = low_res_dist, y = avg_rank),
-#               method="glm", formula = y ~ I(log(x)),
-#               se=FALSE, size=1, color = r_col) +
-#   scale_y_reverse() +
-#   labs(
-#     title = "testing geom_smooth exponential decay (log)")
-
-
-```
-
-
-```{r, fig.align='center', fig.height=20, out.width='100%', include=FALSE}
-
-# average_rank_all_samples <- ggplot(data = avg_by_city_and_firm, 
-#                                    mapping = aes(x = rough_geodist, y = avg_rank, group = C(City, Sample))) +
-#   geom_line(alpha = 0.4) +
-#   geom_line(data = avg_by_city, mapping = aes(x = rough_geodist, y = avg_rank, group = 1), size = 1.2, color = r_col) +
-#   scale_y_reverse() +
-#   scale_x_continuous(
-#     breaks = seq(0,max(avg_by_city_and_firm$rough_geodist), by = 2), 
-#     minor_breaks = NULL) + 
-#   labs(
-#     title = "The Average Drop in Ranking Varies",
-#     subtitle = "The magnitude of the drop varies greatly between law firms: the highest ranking firms drop much less. \nEach grey line is a sample (a law firm), and their average is in pink.\nA rank of 21  means '+20': out of the top 20."
-#   ) +
-#   xlab("Distance in miles to the location of the law firm") +
-#   ylab("Ranking (average, binned by mile)")
-# 
-# if(save == T){ 
-#   plot_to_save <- average_rank_all_samples +
-#     facet_wrap(vars(City), ncol = 5)
-#   
-#   ggsave(here::here("plots",
-#                     "average_rank_all_samples-50cities.pdf"),
-#          plot_to_save, 
-#          width = 15, height = 40, device = cairo_pdf)
-# }
-# 
-# average_rank_all_samples +
-#   my_theme()
-
-```
-
+It is computed with a rank of 25 for the firms out of the top 20 and for which the rank is not recorded anymore by Local Falcon. This is distorting the "true" average, which is unknown and likely lower at large miles. Another probable distortion is that the ranking is likely to "continuously" decline, and not stabilize at a certain value. The current impression of a stabilization of the mean is due to the constant value of 25 attributed to the "+20" measurements. Nevertheless, our method allows for a visualization of an estimate of the average drop in each cities. This estimate is just more precise for smaller distances.     
 
 
 
 ### Drop from Initial Position (Relative Ranking)
 
-In order to better compare the drop in ranking between law firms and cities, we can visualize their drop from their initial position - the relative ranking.  
+In order to better compare the drop in ranking between law firms and cities, we can visualize their drop from their initial position - the relative ranking. Note that this drop is still computed with a value of 25 for the "+20" measurements.   
 
 First, for the most populated and less populated city:  
 
@@ -909,7 +859,7 @@ if(save == T){
 
 ```
 
-Note that, again, the average is computed with a constant value of "21" for the samples out of the top 20. Nevertheless, all cities see a drop of -5 to -12 in the average ranking of the law firms in the first mile. The drop seems to be larger in the Queens than in New-Orleans.    
+Note that, again, the average is computed with a constant value of "25" for the samples out of the top 20. This explains the stabilization of the curve at large distances. Nevertheless, all cities see a drop of -5 to -12 in the average ranking of the law firms in the first mile. The drop seems to be larger in the Queens than in New-Orleans.    
 
 
 ```{r include=FALSE}
@@ -937,9 +887,13 @@ avg_by_city_and_firm %>%
 
 ### Exponential Decay?
 
-As we just saw, the drop in term of ranking has the same shape in all cities. The drop seems to follow more or less a rule of [exponential decay](https://en.wikipedia.org/wiki/Exponential_decay): it decreases at a rate proportional to its current value. At first it decreases fast and then reach stability.  
+As we just saw, the drop in term of ranking has a similar shape in all cities. The drop seems to follow more or less a rule of [exponential decay](https://en.wikipedia.org/wiki/Exponential_decay): it decreases at a rate proportional to its current value. At first it decreases fast and then reach stability.  
 
-We start by illustrating the fit with all the samples taken in all cities, together. In order to get a better estimate of the exponential decay function, we average the data each tenth of a mile. In pink, we see the average drop in ranking regardless of the city:  
+The _exponential decay function_ can be formalized like this: $Drop(d) = Drop0 * e^{-λd})$, where $Drop(d)$ is the drop at a distance $d$ and $λ$ is the decay constant.
+
+If we fit an _exponential decay function_ to the average, we estimate $λ$. If we have an estimate of $λ$, we can use the _exponential decay function_ to estimate the drop which would be expected, on average, at a certain distance $d$.  
+
+We start by illustrating the decay with all the samples taken in all cities, together. In order to get a better estimate of the exponential decay function, we average the data each tenth of a mile. In pink, we see the average drop in ranking regardless of the city:  
 
 ````{r fig.align='center', fig.height=6, out.width='100%'}
 
@@ -968,22 +922,22 @@ avg_drop_overall <- ggplot(data = avg_by_city_and_firm_granular,
                            group = 1), 
              size = 2, 
              color = r_col) +
-  geom_smooth(
-    data = avg_drop_total_no_zero,
-    mapping = aes(x = granular_geodist, 
-                  y = avg_drop,
-                  group = 1),
-    
-    method="glm", 
-    formula = y ~ I(log(x)),
-    se=FALSE, size=1, color = "#13D18F") +
+  # geom_smooth(
+  #   data = avg_drop_total_no_zero,
+  #   mapping = aes(x = granular_geodist, 
+  #                 y = avg_drop,
+  #                 group = 1),
+  #   
+  #   method="glm", 
+  #   formula = y ~ I(log(x)),
+  #   se=FALSE, size=1, color = "#13D18F") +
   scale_x_continuous(
     breaks = seq(0, max(avg_by_city_and_firm_granular$granular_geodist), by = 2), 
     minor_breaks = NULL) +
   my_theme() +
   labs(
     title = "Drop by Mile",
-    subtitle = "Each grey line is a sample (a law firm), all cities included."
+    subtitle = "Each grey line is a sample (a law firm), all cities included.\nMeasurement are binned each tenth of a mile.\nThe average is shown in pink."
   ) +
   xlab("Distance in miles to the location of the law firm") +
   ylab("Drop in the ranking\n(indexed at 0)")
@@ -1001,7 +955,48 @@ avg_drop_overall
 
 ```
 
-experimenting with fitting:
+Then we can fit an _exponential decay function_ to the average:  
+
+
+```{r}
+
+# start here from avg_drop_total, 0 is OK, fit 
+
+avg_drop_overall <- ggplot(data = avg_by_city_and_firm_granular, 
+                           mapping = aes(x = granular_geodist, 
+                                         y = avg_drop,
+                                         group = unique_sample)) +
+  geom_line(alpha = 0.1) +
+  geom_line(data = avg_drop_total, 
+            mapping = aes(x = granular_geodist, 
+                          y = avg_drop, 
+                          group = 1), 
+            size = 1, 
+            color = r_col,
+            linetype = "dashed") +
+  geom_point(data = avg_drop_total, 
+             mapping = aes(x = granular_geodist, 
+                           y = avg_drop, 
+                           group = 1), 
+             size = 2, 
+             color = r_col) +
+  scale_x_continuous(
+    breaks = seq(0, max(avg_by_city_and_firm_granular$granular_geodist), by = 2), 
+    minor_breaks = NULL) +
+  my_theme() +
+  labs(
+    title = "Drop by Mile",
+    subtitle = "Each grey line is a sample (a law firm), all cities included.\nMeasurement are binned each tenth of a mile.\nThe average is shown in pink."
+  ) +
+  xlab("Distance in miles to the location of the law firm") +
+  ylab("Drop in the ranking\n(indexed at 0)")
+
+avg_drop_overall
+
+
+```
+
+
 
 ```{r}
 # Experimenting with fitting the decay:
@@ -1012,6 +1007,12 @@ data_for_fit <- avg_drop_total_no_zero %>%
     avg_drop_norm = 0 + (((avg_drop - min(avg_drop)) * (20 - 0))  / (max(avg_drop) - min(avg_drop))),
     avg_drop_translatd = avg_drop + 20
   ) 
+
+data_for_fit <- avg_drop_total %>%
+  mutate(
+    avg_drop_norm =avg_drop,
+    avg_drop_translatd = avg_drop
+  )
 
 # linearizing:
 fit1 = lm(avg_drop_translatd ~ granular_geodist, data = data_for_fit)
@@ -1073,7 +1074,7 @@ ggplot(tmp, aes(x=granular_geodist, y = avg_drop_translatd)) +
 
 ## When are Law Firms Dropping Out of the Top 20?
 
-Google Maps shows 20 results on the first search page and Local Falcon does not collect the ranking above the topø 20. We saw above that the ranking was dropping fast in the first mile, but also that not all the firms were dropping out of the top 20 after 10 miles. And this, in all cities, regardless of their area.  
+Google Maps shows 20 results on the first search page and Local Falcon does not collect the ranking above the top 20. We saw above that the ranking was dropping fast in the first mile, but also that not all the firms were dropping out of the top 20 after 10 miles. And this, in all cities, regardless of their area.  
 
 For example, a 10-mile radius is enough to completely cover the city of Boston and its surroundings, but this is absolutely not the case in Los Angeles. However, in both cases, we identify companies that fall out of the top 20 after 5 or 10 miles and others that do not fall out of the top 20.  
 
