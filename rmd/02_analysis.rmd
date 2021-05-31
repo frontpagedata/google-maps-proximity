@@ -11,6 +11,7 @@ output:
     toc_depth: 3
     toc_float: true
     number_sections: true
+    keep_md: true # keep the intermediary files, including the plots as .png
 editor_options: 
   chunk_output_type: console
 ---
@@ -490,9 +491,14 @@ avg_by_city_and_firm %>%
   ggplot(aes(x = avg_rank, y = initial_rank_in_perc, fill = seg_color)) +
   geom_col() +
   scale_fill_identity() +
-  scale_y_continuous(labels = scales::percent) +
+  scale_y_continuous(labels = scales::percent, breaks = c(0, 0.1, 0.2, 0.3, 0.4, 0.5)) +
+  scale_x_continuous(breaks = c(1,5,10,15,20,25)) +
+  labs(
+    title = "56% of law firms ranked first at their own location"
+  ) +
   xlab("Rank at own location") +
-  ylab("Percentage of law firms")
+  ylab("Percentage of law firms") 
+
 
 ```
 
@@ -520,6 +526,7 @@ avg_by_city_and_firm %>%
   scale_x_continuous(
     breaks = seq(0,max(avg_by_city_and_firm$rough_geodist), by = 1), 
     minor_breaks = NULL) + 
+  labs(title = "How to read the visualizations") +
   xlab("Distance in miles to the location of the law firm") +
   ylab("Ranking\n(average, binned by mile)") +
   annotate(geom = "text", x=4, y=1, 
@@ -591,7 +598,7 @@ rank_all_samples_2cities +
 
 Then, for all 50 largest US cities:  
 
-```{r, fig.align='center', fig.height=10, out.width='100%'}
+```{r, fig.align='center', fig.height=12, out.width='100%'}
 
 rank_all_samples <- ggplot(data = avg_by_city_and_firm, 
                            mapping = aes(x = rough_geodist, 
@@ -601,16 +608,15 @@ rank_all_samples <- ggplot(data = avg_by_city_and_firm,
   geom_line(alpha = 0.4) +
   # geom_point(alpha = 0.4, size = 0.2) +
   scale_color_identity() +
-  scale_y_reverse() +
+  scale_y_reverse(breaks = c(1,5,10,15,20,25)) +
   scale_x_continuous(
     breaks = seq(0,max(avg_by_city_and_firm$rough_geodist), by = 2), 
-    minor_breaks = NULL)
-# labs(
-#   title = "The Ranking Drops by Distance",
-#   subtitle = "However, the magnitude of the drop varies greatly between law firms: the highest ranking firms drop much less. \nEach line is a sample (a law firm).A rank of 21  means '+20': out of the top 20."
-# ) +
-# xlab("Distance in miles to the location of the law firm") +
-# ylab("Ranking (average, binned by mile)")
+    minor_breaks = NULL) +
+  # labs(
+  #   title = "The Ranking Drops by Distance",
+  #   subtitle = "However, the magnitude of the drop varies greatly between law firms: the highest ranking firms drop much less. \nEach line is a sample (a law firm).A rank of 21  means '+20': out of the top 20."
+  # ) +
+  xlab("Distance in miles to the location of the law firm")
 
 if(save == T){ 
   plot_to_save <- rank_all_samples +
@@ -625,7 +631,34 @@ if(save == T){
 rank_all_samples +
   facet_wrap(vars(City), ncol = 5) + 
   my_theme() + 
-  theme_void()
+  theme(
+    strip.text = element_text(size = 7.8,
+                              color = "black",
+                              face = "bold"),
+    axis.line.x = element_line(color = "black",
+                               size = .2),
+    axis.line.y = element_line(color = "black",
+                               size = .2),
+    axis.title.x = element_text(size = 11,
+                                face = "bold"),
+    axis.title.y = element_text(size = 11,
+                                face = "bold"),
+    axis.text = element_text(size = 6,
+                             color = "black",
+                             face = "bold"),
+    axis.ticks = element_blank(),
+    panel.grid.major.x = element_line(size = .2,
+                                      color = "#eaeaea",
+                                      linetype = "solid"),
+    panel.grid.major.y = element_line(size = .2,
+                                      color = "#eaeaea",
+                                      linetype = "solid"),
+    panel.grid.minor.x = element_blank(),
+    panel.grid.minor.y = element_blank(),
+    panel.spacing.x = unit(0.2, "lines"), # less space around plots
+    panel.spacing.y = unit(1, "lines"),
+    axis.title.y.left = element_blank() # no axis label (the space is used by the plots instead)
+  )
 
 ```
 
@@ -682,7 +715,7 @@ rank_all_samples_2cities_avg +
 
 And for all 50 cities:  
 
-```{r, fig.align='center', fig.height=10, out.width='100%'}
+```{r, fig.align='center', fig.height=12, out.width='100%'}
 
 rank_all_samples_avg <- ggplot(data = avg_by_city_and_firm, 
                                mapping = aes(x = rough_geodist, 
@@ -697,27 +730,55 @@ rank_all_samples_avg <- ggplot(data = avg_by_city_and_firm,
                           group = 1), 
             size = 1.2, 
             color = r_col) +
-  scale_y_reverse() +
+  scale_y_reverse(breaks = c(1,5,10,15,20,25)) +
   scale_color_identity() +
   scale_x_continuous(
     breaks = seq(0,max(avg_by_city_and_firm$rough_geodist), by = 2), 
-    minor_breaks = NULL)
-
-if(save == T){ 
-  plot_to_save <- rank_all_samples_avg +
-    facet_wrap(vars(City), ncol = 5)
+    minor_breaks = NULL) +
+  xlab("Distance in miles to the location of the law firm") +
   
-  ggsave(here::here("plots",
-                    "rank_all_samples_avg-50cities.pdf"),
-         plot_to_save, 
-         width = 15, height = 40, device = cairo_pdf)
-}
+  
+  if(save == T){ 
+    plot_to_save <- rank_all_samples_avg +
+      facet_wrap(vars(City), ncol = 5)
+    
+    ggsave(here::here("plots",
+                      "rank_all_samples_avg-50cities.pdf"),
+           plot_to_save, 
+           width = 15, height = 40, device = cairo_pdf)
+  }
 
 rank_all_samples_avg +
   facet_wrap(vars(City), ncol = 5) + 
   my_theme() + 
-  theme_void()
-
+  theme(
+    strip.text = element_text(size = 7.8,
+                              color = "black",
+                              face = "bold"),
+    axis.line.x = element_line(color = "black",
+                               size = .2),
+    axis.line.y = element_line(color = "black",
+                               size = .2),
+    axis.title.x = element_text(size = 11,
+                                face = "bold"),
+    axis.title.y = element_text(size = 11,
+                                face = "bold"),
+    axis.text = element_text(size = 6,
+                             color = "black",
+                             face = "bold"),
+    axis.ticks = element_blank(),
+    panel.grid.major.x = element_line(size = .2,
+                                      color = "#eaeaea",
+                                      linetype = "solid"),
+    panel.grid.major.y = element_line(size = .2,
+                                      color = "#eaeaea",
+                                      linetype = "solid"),
+    panel.grid.minor.x = element_blank(),
+    panel.grid.minor.y = element_blank(),
+    panel.spacing.x = unit(0.2, "lines"), # less space around plots
+    panel.spacing.y = unit(1, "lines"),
+    axis.title.y.left = element_blank() # no axis label (the space is used by the plots instead)
+  )
 ```
 
 
@@ -779,7 +840,7 @@ average_drop_2cities +
 Then, for all 50 cities:  
 
 
-```{r fig.align='center', fig.height=12, out.width='100%'}
+```{r fig.align='center', fig.height=14, out.width='100%'}
 
 average_drop_all_samples <- ggplot(data = avg_by_city_and_firm, 
                                    mapping = aes(x = rough_geodist, 
@@ -795,23 +856,52 @@ average_drop_all_samples <- ggplot(data = avg_by_city_and_firm,
             color = r_col) +
   scale_x_continuous(
     breaks = seq(0, max(avg_by_city_and_firm$rough_geodist), by = 2), 
-    minor_breaks = NULL)
-
-if(save == T){ 
-  plot_to_save <- average_drop_all_samples +
-    facet_wrap(vars(City), ncol = 5) 
+    minor_breaks = NULL) +
+  xlab("Distance in miles to the location of the law firm") +
   
-  ggsave(
-    here::here("plots",
-               "average_drop_all_samples-50cities.pdf"),
-    plot_to_save, 
-    width = 15, height = 40, device = cairo_pdf)
-}
+  
+  if(save == T){ 
+    plot_to_save <- average_drop_all_samples +
+      facet_wrap(vars(City), ncol = 5) 
+    
+    ggsave(
+      here::here("plots",
+                 "average_drop_all_samples-50cities.pdf"),
+      plot_to_save, 
+      width = 15, height = 40, device = cairo_pdf)
+  }
 
 average_drop_all_samples +
   facet_wrap(vars(City), ncol = 5) + 
   my_theme() +
-  theme_void()
+  theme(
+    strip.text = element_text(size = 7.8,
+                              color = "black",
+                              face = "bold"),
+    axis.line.x = element_line(color = "black",
+                               size = .2),
+    axis.line.y = element_line(color = "black",
+                               size = .2),
+    axis.title.x = element_text(size = 11,
+                                face = "bold"),
+    axis.title.y = element_text(size = 11,
+                                face = "bold"),
+    axis.text = element_text(size = 6,
+                             color = "black",
+                             face = "bold"),
+    axis.ticks = element_blank(),
+    panel.grid.major.x = element_line(size = .2,
+                                      color = "#eaeaea",
+                                      linetype = "solid"),
+    panel.grid.major.y = element_line(size = .2,
+                                      color = "#eaeaea",
+                                      linetype = "solid"),
+    panel.grid.minor.x = element_blank(),
+    panel.grid.minor.y = element_blank(),
+    panel.spacing.x = unit(0.2, "lines"), # less space around plots
+    panel.spacing.y = unit(1, "lines"),
+    axis.title.y.left = element_blank() # no axis label (the space is used by the plots instead)
+  )
 
 
 ```
@@ -823,21 +913,24 @@ We can superimpose all the drops in one single plot to show **the average drop i
 
 ```{r fig.align='center', fig.height=4.5, out.width='100%'}
 
+library(ggiraph)
 
-avg_drop_for_all_cities <- ggplot(data = avg_by_city, 
-                                  mapping = aes(x = rough_geodist, 
-                                                y = avg_drop,
-                                                group = City)) +
-  geom_line(alpha = 1, color = r_col) +
+avg_drop_for_all_cities <- ggplot(data = avg_by_city) +
+  geom_line_interactive(aes(x = rough_geodist,
+                            y = avg_drop,
+                            group = City,
+                            tooltip = City,
+                            data_id = City),
+                        alpha = 1, color = r_col) +
   # geom_point(alpha = 0.4, size = 0.2) +
   scale_x_continuous(
     breaks = seq(0, max(avg_by_city_and_firm$rough_geodist), by = 2), 
     minor_breaks = NULL) +
   my_theme() +
   labs(
-    title = "Average Drop by Mile in each City"
-    # subtitle = "Each grey line is a sample (a law firm), and their average is in pink."
-  ) +
+    title = "Average Drop by Mile in each City",
+    subtitle = "Hover on a line to highlight a particular city"
+  ) + 
   xlab("Distance in miles to the location of the law firm") +
   ylab("Drop in the ranking\n(indexed at 0)") +
   geom_text_repel(
@@ -848,15 +941,27 @@ avg_drop_for_all_cities <- ggplot(data = avg_by_city,
     # direction = "y"
   )
 
-avg_drop_for_all_cities
+girafe(ggobj = avg_drop_for_all_cities,
+       options = list(
+         opts_hover_inv(css = "opacity:0.1;"),
+         opts_hover(css = "stroke-width:2;")
+       )
+)
+# x <- girafe(ggobj = gg)
+# x <- girafe_options(x,
+#                     opts_hover(
+#                       css = "fill:wheat;stroke:blue;r:5pt;"),
+#                     line = "fill:none;stroke:blue;stroke-width:3px"
+# )
+# if( interactive() ) print(x)
 
-if(save == T){ 
-  ggsave(
-    here::here("plots",
-               "avg_drop_for_all_cities-50cities.pdf"),
-    plot_to_save, 
-    width = 15, height = 15, device = cairo_pdf)
-}
+# if(save == T){ 
+#   ggsave(
+#     here::here("plots",
+#                "avg_drop_for_all_cities-50cities.pdf"),
+#     plot_to_save, 
+#     width = 15, height = 15, device = cairo_pdf)
+# }
 
 
 ```
@@ -1028,6 +1133,43 @@ This is just an estimate based on an average. We see on the plots above that in 
 
 Nevertheless, it is possible to fit such an exponential decay function separately for the averages in all cities. It would allow us to compute predictions of what the typical drop would look like in each city.     
 
+For simplicity, here is the same plot showing only the average on all law firms and the _exponential decay_ fit:  
+
+```{r fig.align='center', fig.height=6, out.width='100%'}
+
+# (fit done in previous code chunk)
+
+avg_drop_overall <- ggplot(data = avg_drop_total,
+                           mapping = aes(x = granular_geodist,
+                                         y = avg_drop,
+                                         group = 1)) +
+  # the average in pink:
+  geom_line(size = 0.2,
+            color = r_col) +
+  geom_point(size = 1, 
+             color = r_col) +
+  # the fit in green:
+  geom_line(data = avg_drop_total, 
+            mapping = aes(x = granular_geodist, 
+                          y = exp_decay_pred, 
+                          group = 1), 
+            size = 1.5, 
+            color = "#13D18F") +
+  scale_x_continuous(
+    breaks = seq(0, max(avg_by_city_and_firm_granular$granular_geodist), by = 2), 
+    minor_breaks = NULL) +
+  my_theme() +
+  labs(
+    title = "Average Drop Follows Exponential Decay Rule",
+    subtitle = "The average drop (across all firms and cities) is shown in pink,\nand the exponential decay fit in green."
+  ) +
+  xlab("Distance in miles to the location of the law firm") +
+  ylab("Drop in the ranking\n(indexed at 0)")
+
+avg_drop_overall
+
+```
+
 
 
 ```{r, include=FALSE}
@@ -1116,7 +1258,7 @@ Google Maps shows 20 results on the first search page and Local Falcon does not 
 
 For example, a 10-mile radius is enough to completely cover the city of Boston and its surroundings, but this is absolutely not the case in Los Angeles. However, in both cases, we identify companies that fall out of the top 20 after 5 or 10 miles and others that do not fall out of the top 20.  
 
-How does the proportion of law firms out of the top 20 change with distance?   
+**How does the proportion of law firms out of the top 20 change with distance?**   
 
 We first have a look at New-York and Oklahoma-City:  
 
