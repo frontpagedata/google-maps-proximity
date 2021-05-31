@@ -39,6 +39,6 @@ vignettes/*.pdf
 .Renviron
 
 # ignore the HTML because too big
-rmd/02_analysis.html
-02_analysis.html
-*02_analysis.html
+# rmd/02_analysis.html
+# 02_analysis.html
+# *02_analysis.html
