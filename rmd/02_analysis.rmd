@@ -105,66 +105,66 @@ dpi <- 750
 theme_set(ggthemes::theme_clean(base_size = 12, base_family = "FiraSans-Regular"))
 
 
-theme_update(plot.margin = margin(30, 30, 30, 30),
-             plot.background = element_rect(color = "white",
-                                            fill = "white"),
-             plot.title = element_text(size = 20,
-                                       face = "bold",
-                                       lineheight = 1.05,
-                                       hjust = .5,
-                                       margin = margin(10, 0, 25, 0)),
-             plot.title.position = "plot",
-             plot.subtitle = element_text(size = 16),
-             plot.caption = element_text(color = "grey40",
-                                         size = 9,
-                                         margin = margin(20, 0, -20, 0)),
-             plot.caption.position = "plot",
-             axis.line.x = element_line(color = "black",
-                                        size = .8),
-             axis.line.y = element_line(color = "black",
-                                        size = .8),
-             axis.title.x = element_text(size = 16,
-                                         face = "bold",
-                                         margin = margin(t = 20)),
-             axis.title.y = element_text(size = 16,
-                                         face = "bold",
-                                         margin = margin(r = 20)),
-             axis.text = element_text(size = 11,
-                                      color = "black",
-                                      face = "bold"),
-             axis.text.x = element_text(margin = margin(t = 10)),
-             axis.text.y = element_text(margin = margin(r = 10)),
-             axis.ticks = element_blank(),
-             panel.grid.major.x = element_line(size = .6,
-                                               color = "#eaeaea",
-                                               linetype = "solid"),
-             panel.grid.major.y = element_line(size = .6,
-                                               color = "#eaeaea",
-                                               linetype = "solid"),
-             panel.grid.minor.x = element_line(size = .6,
-                                               color = "#eaeaea",
-                                               linetype = "solid"),
-             panel.grid.minor.y = element_blank(),
-             panel.spacing.x = unit(4, "lines"),
-             panel.spacing.y = unit(2, "lines"),
-             legend.position = "top",
-             legend.title = element_text(family = "Montserrat",
-                                         color = "black",
-                                         size = 14,
-                                         margin = margin(5, 0, 5, 0)),
-             legend.text = element_text(family = "Montserrat",
-                                        color = "black",
-                                        size = 11,
-                                        margin = margin(4.5, 4.5, 4.5, 4.5)),
-             legend.background = element_rect(fill = NA,
-                                              color = NA),
-             legend.key = element_rect(color = NA, fill = NA),
-             #legend.key.width = unit(5, "lines"),
-             #legend.spacing.x = unit(.05, "pt"),
-             #legend.spacing.y = unit(.55, "pt"),
-             #legend.margin = margin(0, 0, 10, 0),
-             strip.text = element_text(face = "bold",
-                                       margin = margin(b = 10)))
+# theme_update(plot.margin = margin(30, 30, 30, 30),
+#              plot.background = element_rect(color = "white",
+#                                             fill = "white"),
+#              plot.title = element_text(size = 20,
+#                                        face = "bold",
+#                                        lineheight = 1.05,
+#                                        hjust = .5,
+#                                        margin = margin(10, 0, 25, 0)),
+#              plot.title.position = "plot",
+#              plot.subtitle = element_text(size = 16),
+#              plot.caption = element_text(color = "grey40",
+#                                          size = 9,
+#                                          margin = margin(20, 0, -20, 0)),
+#              plot.caption.position = "plot",
+#              axis.line.x = element_line(color = "black",
+#                                         size = .8),
+#              axis.line.y = element_line(color = "black",
+#                                         size = .8),
+#              axis.title.x = element_text(size = 16,
+#                                          face = "bold",
+#                                          margin = margin(t = 20)),
+#              axis.title.y = element_text(size = 16,
+#                                          face = "bold",
+#                                          margin = margin(r = 20)),
+#              axis.text = element_text(size = 11,
+#                                       color = "black",
+#                                       face = "bold"),
+#              axis.text.x = element_text(margin = margin(t = 10)),
+#              axis.text.y = element_text(margin = margin(r = 10)),
+#              axis.ticks = element_blank(),
+#              panel.grid.major.x = element_line(size = .6,
+#                                                color = "#eaeaea",
+#                                                linetype = "solid"),
+#              panel.grid.major.y = element_line(size = .6,
+#                                                color = "#eaeaea",
+#                                                linetype = "solid"),
+#              panel.grid.minor.x = element_line(size = .6,
+#                                                color = "#eaeaea",
+#                                                linetype = "solid"),
+#              panel.grid.minor.y = element_blank(),
+#              panel.spacing.x = unit(4, "lines"),
+#              panel.spacing.y = unit(2, "lines"),
+#              legend.position = "top",
+#              legend.title = element_text(family = "Montserrat",
+#                                          color = "black",
+#                                          size = 14,
+#                                          margin = margin(5, 0, 5, 0)),
+#              legend.text = element_text(family = "Montserrat",
+#                                         color = "black",
+#                                         size = 11,
+#                                         margin = margin(4.5, 4.5, 4.5, 4.5)),
+#              legend.background = element_rect(fill = NA,
+#                                               color = NA),
+#              legend.key = element_rect(color = NA, fill = NA),
+#              #legend.key.width = unit(5, "lines"),
+#              #legend.spacing.x = unit(.05, "pt"),
+#              #legend.spacing.y = unit(.55, "pt"),
+#              #legend.margin = margin(0, 0, 10, 0),
+#              strip.text = element_text(face = "bold",
+#                                        margin = margin(b = 10)))
 
 my_theme <- function(){
   theme(
@@ -335,6 +335,8 @@ samples <- rio::import(here::here("proc_data", "samples_50cities.rds")) %>%
 # 
 # samples  %>% filter(Sample %in% ten_miles_samples) %>% filter(geodist_miles < 1, geodist_miles != 0) %>% count(Sample)
 
+
+
 ```
 
 
@@ -476,6 +478,107 @@ On the left, we see a very quick drop in the ranking. On the right, we see the c
 To account for this high variation between the firm, we need to collect several samples in each city; we collected 20. We used a radius of 10 miles. This allows us to both highlight the drop in ranking around the exact location of the firm and identify the distance where most of the firms drop out of the top 20. 
 Furthermore, for the 10 largest cities, we also collected 10 samples at a 5 miles radius, a finer granularity, to better highlight the drop in ranking around the firm.   
 
+After collecting the data, we can reproduce the grid shown above with a heat map. Below is for instance the same law firm. Each tile is the rank of the law firm observed by Local Falcon on the 15x15 grid centered at the firm's location. The grid measures 10 miles by 10 miles.  
+
+```{r fig.align='center', fig.height=6, out.width='70%'}
+
+normalize_10miles <- function(x){
+  # min-max norm. btw 0 and 1
+  return(round((x - min(x)) / (max(x) - min(x)), 3))
+}
+
+normalize_5miles <- function(x){
+  # min-max norm. btw 0 and 0.5
+  return(round((x - min(x)) * 0.5 / (max(x) - min(x)), 3))
+}
+
+to_plot_heatmap <- samples %>% select(City, Sample, rank, Latitude, Longitude) %>%
+  filter(City == "Miami", Sample == "12") %>%
+  mutate(
+    rank_label = as.character(rank),
+    rank_label = ifelse(rank_label == 25, "20+", rank_label),
+    rank = ifelse(rank == 25, NA, rank),
+  ) %>%
+  group_by(Sample) %>%
+  mutate( # need to normalize location else cannot facet them (not same axis)
+    Long_norm = as.factor(normalize_10miles(Longitude)),
+    Lat_norm = as.factor(normalize_10miles(Latitude))
+  ) %>%
+  ungroup()
+
+ggplot(data = to_plot_heatmap,
+       aes(x = Long_norm, y = Lat_norm, fill = rank) ) +
+  geom_tile(show.legend = FALSE) +
+  geom_text(aes(label = rank_label)) +
+  scale_fill_gradient(low = "#005470", high = "#F3E5C9", na.value = "#ff8989", guide = FALSE) +
+  coord_equal() + # force square tiles
+  theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(),
+        panel.background = element_blank(),
+        axis.ticks = element_blank(), axis.ticks.x = element_blank(),
+        panel.border=element_blank()) +
+  theme_void()
+# theme(panel.grid.major.x = element_blank())
+
+
+```
+
+Then, we can visualize on the same 10-mile by 10-mile grid all the 20 law firm samples collected in Miami (the 10 first samples where collected on a 5-mile by 5-mile grid and are not shown below). The sample 12 is the one shown above. We observe that the law firm of sample 11 keeps ranking high even at high distance, whereas the sample law firm 13 directly drops out of the top 20 outside its own location.  
+
+```{r fig.align='center', fig.height=6, out.width='100%'}
+
+ten_miles_samples <- as.character(seq(11,30))
+# see the study plan: 
+# https://docs.google.com/spreadsheets/d/1KCDf10VUDOEMKvIobbgmAJub0w1ETslf4oVmrzS8wQQ/
+
+# This might be useful if want to viz both 5-mile and 10-mile samples together:
+#   https://github.com/tidyverse/ggplot2/issues/2103
+
+to_plot_heatmap <- samples %>% select(City, Sample, rank, Latitude, Longitude) %>%
+  filter(City == "Miami") %>%
+  mutate(
+    rank_label = as.character(rank),
+    rank_label = ifelse(rank_label == 25, "20+", rank_label),
+    rank = ifelse(rank == 25, NA, rank),
+  ) %>%
+  group_by(Sample) %>%
+  mutate( # for now, we ttreat them the same, then just show the 10-mile radius samples
+    Long_norm = ifelse(Sample %in% ten_miles_samples, 
+                       as.factor(normalize_10miles(Longitude)),
+                       as.factor(normalize_10miles(Longitude))),
+    Lat_norm = ifelse(Sample %in% ten_miles_samples, 
+                      as.factor(normalize_10miles(Latitude)),
+                      as.factor(normalize_10miles(Latitude)))
+  ) %>%
+  ungroup() %>%
+  filter(Sample %in% ten_miles_samples)
+
+ggplot(data = to_plot_heatmap,
+       aes(x = Long_norm, y = Lat_norm, fill = rank, label = rank_label) ) +
+  facet_wrap(vars(Sample), ncol = 5)  +
+  geom_tile(show.legend = FALSE) +
+  # geom_text() +
+  # scale_fill_gradient(low = "#8a0028", high = "#fa9fb5", na.value = "#fde0dd", guide = FALSE) +
+  # scale_fill_gradient(low = "#9A3A98", high = "#D4EAFF", na.value = "#cccccc", guide = FALSE) +
+  # scale_fill_gradient(low = r_col, high = "#D4EAFF", na.value = "#e6e6e6", guide = FALSE) +
+  # scale_fill_gradient(low = "#A90774", high = "#FBE2AF", na.value = "#D3E7F1", guide = FALSE) +
+  # scale_fill_gradient(low = "#3E74A5", high = "#F6FBE1", na.value = "#e6e6e6", guide = FALSE) +
+  scale_fill_gradient(low = "#005470", high = "#F3E5C9", na.value = "#ff8989", guide = FALSE) +
+  coord_equal() + # force square tiles
+  theme_void() +
+  theme(
+    panel.spacing.x = unit(0.2, "lines"), # less space around plots
+    panel.spacing.y = unit(1, "lines"),
+  ) + # add some space
+  labs(
+    title = "All 20 Miami samples collected with 10-mile radius"
+    # caption = "The sample 12 is the one shown above.\nWe observe that the law firm of sample 11 keeps ranking high even at high distance,\nwhereas the sample law firm 13 directly drops out of the top 20 outside its own location."
+  )
+
+
+```
+
+
+
 &nbsp;
 
 Most of the 1100 law firms rank 1st at their own location (56%).  
@@ -504,7 +607,9 @@ avg_by_city_and_firm %>%
 
 &nbsp;
 
-From the latitude and longitude of each of the 225 measurements on the 15x15 grid, we compute the geographical distance to the location of the target law firm. We then average the ranking of a law firm by mile distance to its own location.  
+
+
+We want to compute the ranking _by distance_ to a law firm's location. So, from the latitude and longitude of each of the 225 measurements on the 15x15 grid, we compute the geographical distance to the location of the target law firm. We then average the ranking of a law firm by mile distance to its own location.     
 
 **There is a major caveat of the data collected with Local Falcon: Local Falcon does not collect rankings above 20** - the first page of search results; they are just collected as "20+". So, in order to numerically estimate the decline in ranking, for instance by computing the average rank at a certain distance from a law firm's localization, we need to impute the value of these missing ranks. For the sake of this study, **we assigned the value of 25 to all "20+" measurements**. This is not perfect and has an impact on the computation of the average ranking. Nevertheless, it still allows us to visualize this decline.   
 
