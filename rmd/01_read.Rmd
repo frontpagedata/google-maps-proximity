@@ -88,10 +88,10 @@ for (file in all_files){
     skip = 9) %>% # skip the first useless rows
     select(`Your Rank`, Latitude, Longitude) # select only the columns we need
   
-  origin_lat = sample[113,]$Latitude
+  origin_lat = sample[113,]$Latitude # that's at the location of the firm (225/2)
   origin_lon = sample[113,]$Longitude
   origin_rank = case_when(
-    sample[113,]$`Your Rank` == "20+" ~ 21,
+    sample[113,]$`Your Rank` == "20+" ~ 21, # recode so that we can compute averages later
     TRUE ~ as.numeric(as.character(sample[113,]$`Your Rank`))
   )
   # print(origin_rank)
@@ -132,6 +132,44 @@ rio::export(all_samples, here::here("proc_data", "samples_50cities.rds"))
 
 
 
+## Data for Heat Maps
+
+In order to better show to the readers what the data represent, we will try to draw heat maps of the data. In other words, try to reproduce the grid. We need to save the data in a different format for this.  
+
+```{r}
+
+all_files <- list.files(path = here::here("raw_data/raw_scans"))
+counter = 1
+all_samples_grid_list = list() # to store the results
+for (file in all_files){
+  sample_name = stringr::str_extract(file, '.*(?=\\.csv)')
+  print(sample_name)
+  # read sheet
+  sample = rio::import(
+    here::here("raw_data/raw_scans", glue::glue("{sample_name}.csv")),
+    fill = TRUE, # avoid error with LA sample 12, fill empty col with NAs
+    format = "csv",
+    skip = 9) %>% # skip the first useless rows
+    select(`Your Rank`, Latitude, Longitude) # select only the columns we need
+  
+  sample <- sample %>%
+    mutate(
+      city_sample = sample_name
+    ) %>% 
+    select(city_sample, Latitude, Longitude, rank = `Your Rank`)
+
+  all_samples_grid_list[[counter]] <- sample
+  counter = counter + 1
+}
+
+all_samples_on_grid = do.call(rbind, all_samples_grid_list) %>%
+  separate(city_sample, into = c("City", "Sample"), sep = "_", remove = FALSE)
+
+# we save a tidy tibble in long format with all the samples on a grid for drawing heat maps
+rio::export(all_samples_on_grid, here::here("proc_data", "full_grid_50cities.csv"))
+rio::export(all_samples_on_grid, here::here("proc_data", "full_grid_50cities.rds"))
+
+```
 
 
 
