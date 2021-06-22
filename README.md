@@ -10,12 +10,12 @@ The goals of the study are to try to estimate the drop in the ranking by geograp
 :pencil: The full data report can be found [here](https://frontpagedata.com/google-maps-proximity).  
 :hammer: The study was conducted with the statistical programming language [R](https://www.r-project.org/) and made extensive use of the [Tidyverse](https://www.tidyverse.org/).  
 :bar_chart: [The code for the analysis and plots](https://github.com/frontpagedata/google-maps-proximity/blob/main/rmd/02_analysis.rmd).   
-:page_facing_up: The raw collected data can be found in a Google Drive [here](https://drive.google.com/drive/folders/1LL4prLXtapYFXVvw7kgBnqBpzoU3t0lj), or in the _[raw data folder_](https://github.com/frontpagedata/google-maps-proximity/tree/main/raw_data/raw_scans). The [study plan](https://docs.google.com/spreadsheets/d/1wD6ZWDLu2rB-cMgIncDqrIgM_wJ3Ag4Q5Lb7ygvOysA/) or [here in this repo](https://github.com/frontpagedata/google-maps-proximity/blob/main/raw_data/study_plan.csv) is listing all sample law firms and their corresponding cities.  
+:page_facing_up: The raw collected data can be found in a Google Drive [here](https://drive.google.com/drive/folders/1LL4prLXtapYFXVvw7kgBnqBpzoU3t0lj), or in the [_raw data folder_](https://github.com/frontpagedata/google-maps-proximity/tree/main/raw_data/raw_scans). The [study plan](https://docs.google.com/spreadsheets/d/1wD6ZWDLu2rB-cMgIncDqrIgM_wJ3Ag4Q5Lb7ygvOysA/) or [here in this repo](https://github.com/frontpagedata/google-maps-proximity/blob/main/raw_data/study_plan.csv) is listing all sample law firms and their corresponding cities.  
  
 
 **:sparkles: Contributors:**  
-* François Delavy and Daniel Kupka (all frontpagedata.com)
-* Chris Dreyer (Rankings.io)
+* François Delavy and Daniel Kupka (all [frontpagedata.com](https://frontpagedata.com/))
+* Chris Dreyer ([Rankings.io(https://rankings.io/))
 
 
 ## Documentation and Project Infrastructure
