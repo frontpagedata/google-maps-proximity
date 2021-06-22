@@ -15,7 +15,7 @@ The goals of the study are to try to estimate the drop in the ranking by geograp
 
 **:sparkles: Contributors:**  
 * François Delavy and Daniel Kupka (all [frontpagedata.com](https://frontpagedata.com/))
-* Chris Dreyer ([Rankings.io(https://rankings.io/))
+* Chris Dreyer ([Rankings.io](https://rankings.io/))
 
 
 ## Documentation and Project Infrastructure
