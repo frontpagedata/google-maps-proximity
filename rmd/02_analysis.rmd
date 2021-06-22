@@ -54,8 +54,8 @@ font-size: 18px;
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(warning = FALSE, message = FALSE, 
                       fig.showtext = TRUE, 
-                      # dpi = 700,
-                      dev = "svg", # vectorized + decrease size of .html (hence loading time)
+                      dpi = 700,
+                      # dev = "svg", # vectorized + decrease size of .html (hence loading time)
                       echo = FALSE # hide code
 )
 
