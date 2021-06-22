@@ -75,7 +75,7 @@ extrafont::loadfonts()
 
 ## packages: remove or add your necessary packages
 
-required_packages <- c("tidyverse", "extrafont", "here", "colorspace", "pdftools", "kableExtra", "ggrepel")
+required_packages <- c("tidyverse", "extrafont", "here", "colorspace", "pdftools", "kableExtra", "ggrepel", "zoo")
 
 for(i in required_packages) { 
   if(!require(i, character.only = T)) {
@@ -275,7 +275,7 @@ samples <- rio::import(here::here("proc_data", "samples_50cities.rds")) %>%
                   "Salt-Lake-City"= "Salt Lake City",
                   "New-Orleans" = "New Orleans",
                   "Oklahoma-City" = "Oklahoma City"
-                  )
+    )
   )
 
 # # check how many samples in first mile:
@@ -301,7 +301,7 @@ samples <- rio::import(here::here("proc_data", "samples_50cities.rds")) %>%
 # DATA PROCESSING
 #   we need an easy way to plot the distance to origin for the plots.
 #   so, we bin the distance by mile, an compute the average rank in a bin.
-# we create 2 tibbles, one with an average by city
+# we then create several tibbles, one with an average by city
 # and another with an average by city and sample.
 
 # method: because the geo distance varies, and is not the EXACT same
@@ -1004,27 +1004,35 @@ avg_drop_for_all_cities <- ggplot(data = avg_by_city) +
     # direction = "y"
   )
 
-girafe(ggobj = avg_drop_for_all_cities,
-       options = list(
-         opts_hover_inv(css = "opacity:0.1;"),
-         opts_hover(css = "stroke-width:2;")
-       )
+avg_drop_for_all_cities_widget <- girafe(ggobj = avg_drop_for_all_cities,
+                                         options = list(
+                                           opts_hover_inv(css = "opacity:0.1;"),
+                                           opts_hover(css = "stroke-width:2;")
+                                         )
 )
-# x <- girafe(ggobj = gg)
-# x <- girafe_options(x,
-#                     opts_hover(
-#                       css = "fill:wheat;stroke:blue;r:5pt;"),
-#                     line = "fill:none;stroke:blue;stroke-width:3px"
-# )
-# if( interactive() ) print(x)
+avg_drop_for_all_cities_widget
 
-# if(save == T){ 
-#   ggsave(
-#     here::here("plots",
-#                "avg_drop_for_all_cities-50cities.pdf"),
-#     plot_to_save, 
-#     width = 15, height = 15, device = cairo_pdf)
-# }
+
+# save the data of the plot in wide format to recreate it in DataWrapper
+# (in DataWrapper, each line must be a column):
+# we need to interpolate manually for Datawrapper, on the contrary to ggplot2.
+# (there are some miles with missing data)
+skeletton <- tibble(rough_geodist = as.double(rep(seq(0, 16),50))) %>%
+  arrange(rough_geodist) %>%
+  mutate(City = rep(avg_by_city$City %>% levels(), 17)) %>%
+  arrange(City,rough_geodist )
+drop_datawrapper <- skeletton %>%
+  left_join(avg_by_city %>% select(City, rough_geodist, avg_drop), 
+            by = c("rough_geodist", "City")) %>%
+  arrange(City, rough_geodist) %>% 
+  mutate(avg_drop = zoo::na.approx(avg_drop, 
+                                     na.rm = FALSE,
+                                     maxgap = 1) # to not interpolate trailing 0s
+  ) %>%
+  pivot_wider(names_from = City, values_from = avg_drop) %>% 
+  arrange(rough_geodist) 
+drop_datawrapper$Minneapolis[17] <- NA # manual correaction (the only one needed because only city without trailing maxgap >= 2)
+rio::export(drop_datawrapper, here::here("proc_data", 'drop_datawrapper_data.csv'))
 
 
 ```
@@ -1470,6 +1478,27 @@ perc_out_of_top20 +
     panel.grid.minor.x = element_blank(),
     panel.grid.minor.y = element_blank(),
   )
+
+# save the data to reproduce this in DataWrapper (not faceted, hover over style):
+# data need to be in wide format (in DataWrapper, each line must be a column):
+
+# skeletton was defined in the chunk where the average drop is ploted with ggirafe
+out20_datawrapper <- skeletton %>%
+  left_join(avg_by_city %>% select(City, rough_geodist, percentage_out_of_top20), 
+            by = c("rough_geodist", "City")) %>%
+  arrange(City, rough_geodist) %>% 
+  mutate(percentage_out_of_top20 = zoo::na.approx(percentage_out_of_top20, 
+                                     na.rm = FALSE,
+                                     maxgap = 1) # to not interpolate trailing 0s
+  ) %>%
+  mutate(
+    percentage_out_of_top20 = round(100*percentage_out_of_top20,1)
+  ) %>%
+  pivot_wider(names_from = City, values_from = percentage_out_of_top20) %>% 
+  arrange(rough_geodist) 
+out20_datawrapper$Minneapolis[17] <- NA # manual correction (the only one needed because only city without trailing maxgap >= 2)
+rio::export(out20_datawrapper, here::here("proc_data", 'out20_datawrapper_data.csv'))
+
 
 
 ```
