@@ -2,7 +2,7 @@
 
 This is the Github repository for the Proximity Study done with Rankings.io.   
 
-Google relies on user proximity to provide local results for keywords. How vital is the proximity factor? How fast does the ranking decrease by distance from the location of a business?  
+Google relies on user proximity to provide local results for keywords. How vital is the proximity factor? How fast does the ranking decrease by distance from the location of a business?   
 
 The study's goals are to estimate the drop in the ranking by geographical distance and to measure the variability due to the local context (city).
 
