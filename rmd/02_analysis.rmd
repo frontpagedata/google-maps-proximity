@@ -3,7 +3,7 @@ title: "Google Maps Ranking - Proximity Study"
 author: |
   | Lead: Chris Dreyer ([rankings.io](https://rankings.io/))
   | Support: François Delavy & Daniel Kupka ([frontpagedata.com](https://frontpagedata.com/))
-date: "Last updated on `r Sys.Date()`"
+date: "Last updated on `r Sys.Date()` - Data can be found [here](https://docs.google.com/spreadsheets/d/1uOKfBcs_RgAxRf8fAlhmH8f5VLzPtf1t7enPWVT1mnM/edit?usp=sharing)"
 output:
   html_document:
     theme: paper
@@ -265,7 +265,7 @@ samples <- rio::import(here::here("proc_data", "samples_50cities.rds")) %>%
                   "New-York" = "New York",
                   "Los-Angeles" = "Los Angeles",
                   "San-Francisco" = "San Francisco",
-                  "San-Diego" = "Sa Diego",
+                  "San-Diego" = "San Diego",
                   "Las-Vegas" = "Las Vegas",
                   "San-Antonio" = "San Antonio",
                   "St.-Louis" = "St. Louis",
@@ -300,7 +300,7 @@ samples <- rio::import(here::here("proc_data", "samples_50cities.rds")) %>%
 
 # DATA PROCESSING
 #   we need an easy way to plot the distance to origin for the plots.
-#   so, we bin the distance by mile, an compute the average rank in a bin.
+#   so, we bin the distance by mile, and compute the average rank in a bin.
 # we then create several tibbles, one with an average by city
 # and another with an average by city and sample.
 
@@ -533,7 +533,7 @@ ggplot(data = to_plot_heatmap,
 
 ```
 
-
+The grids for all 50 cities are shown in the [Annex](https://frontpagedata.com/google-maps-proximity_annex). The data for this study can be found [here](https://docs.google.com/spreadsheets/d/1uOKfBcs_RgAxRf8fAlhmH8f5VLzPtf1t7enPWVT1mnM/edit?usp=sharing).   
 
 &nbsp;
 
@@ -1026,8 +1026,8 @@ drop_datawrapper <- skeletton %>%
             by = c("rough_geodist", "City")) %>%
   arrange(City, rough_geodist) %>% 
   mutate(avg_drop = zoo::na.approx(avg_drop, 
-                                     na.rm = FALSE,
-                                     maxgap = 1) # to not interpolate trailing 0s
+                                   na.rm = FALSE,
+                                   maxgap = 1) # to not interpolate trailing 0s
   ) %>%
   pivot_wider(names_from = City, values_from = avg_drop) %>% 
   arrange(rough_geodist) 
@@ -1488,8 +1488,8 @@ out20_datawrapper <- skeletton %>%
             by = c("rough_geodist", "City")) %>%
   arrange(City, rough_geodist) %>% 
   mutate(percentage_out_of_top20 = zoo::na.approx(percentage_out_of_top20, 
-                                     na.rm = FALSE,
-                                     maxgap = 1) # to not interpolate trailing 0s
+                                                  na.rm = FALSE,
+                                                  maxgap = 1) # to not interpolate trailing 0s
   ) %>%
   mutate(
     percentage_out_of_top20 = round(100*percentage_out_of_top20,1)
@@ -1536,5 +1536,8 @@ We then compute the rankings and relative ranking (drop) of each law firm for ea
 
 
 
+# Annex
+
+We visualized the Local Falcon grids of all samples as heat maps in an annex: [10-Mile Grids for All Cities](https://frontpagedata.com/google-maps-proximity_annex).  
 
 

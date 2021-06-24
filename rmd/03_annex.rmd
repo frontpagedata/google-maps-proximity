@@ -1,0 +1,956 @@
+---
+title: "Annex to the Google Maps Ranking - Proximity Study"
+author: |
+  | Lead: Chris Dreyer ([rankings.io](https://rankings.io/))
+  | Support: François Delavy & Daniel Kupka ([frontpagedata.com](https://frontpagedata.com/))
+date: "Last updated on `r Sys.Date()`"
+output:
+  html_document:
+    theme: paper
+    highlight: kate
+    # code_folding: hide
+    toc: true
+    toc_depth: 3
+    toc_float: true
+    number_sections: false
+    keep_md: true # keep the intermediary files, including the plots as .png
+editor_options: 
+  chunk_output_type: console
+---
+
+
+<style>
+.list-group-item.active, .list-group-item.active:hover, .list-group-item.active:focus {
+background-color: #D21D5C;
+border-color: #D21D5C;
+}
+
+body {
+font-family: 'Alegreya Sans', sans-serif;
+color: #333333;
+font-size: 18px;
+}
+
+h1 {
+font-weight: bold;
+font-size: 28px;
+}
+
+h1.title {
+font-size: 30px;
+color: #D21D5C;
+}
+
+h2 {
+font-size: 24px;
+}
+
+h3 {
+font-size: 18px;
+}
+</style>
+
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(warning = FALSE, message = FALSE, 
+                      fig.showtext = TRUE, 
+                      # dpi = 700,
+                      dev = "svg", # vectorized + decrease size of .html (hence loading time)
+                      echo = FALSE # hide code
+)
+
+knitr::knit_hooks$set(inline = function(x) {
+  prettyNum(x, big.mark = ",", small.mark = ",", scientific = F)
+})
+
+Sys.setlocale("LC_TIME", "C")
+# extrafont::loadfonts(device = "win")
+extrafont::loadfonts()
+
+```
+
+
+```{r prep}
+# SETUP
+
+## packages: remove or add your necessary packages
+
+required_packages <- c("tidyverse", "extrafont", "here", "colorspace", "pdftools", "kableExtra", "ggrepel", "zoo")
+
+for(i in required_packages) { 
+  if(!require(i, character.only = T)) {
+    
+    #  if package is not existing, install then load the package
+    install.packages(i, dependencies = T)
+    require(i, character.only = T)
+  }
+}
+
+
+## save plots?
+# save <- TRUE
+save <- FALSE
+
+## quality of png's
+dpi <- 750
+
+## font adjust; please adjust to client´s website
+#extrafont::loadfonts(device = "win", quiet = TRUE)
+#font_add_google("Montserrat", "Montserrat")
+# font_add_google("Overpass", "Overpass")
+# font_add_google("Overpass Mono", "Overpass Mono")
+
+
+
+## theme updates; please adjust to client´s website
+#theme_set(ggthemes::theme_clean(base_size = 15))
+theme_set(ggthemes::theme_clean(base_size = 12, base_family = "FiraSans-Regular"))
+
+
+my_theme <- function(){
+  theme(
+    # plot.margin = margin(30, 30, 30, 30),
+    plot.background = element_rect(color = "white", # the border
+                                   fill = "white"),
+    plot.title = element_text(size = 14),
+    plot.title.position = "plot",
+    plot.subtitle = element_text(size = 10),
+    plot.caption = element_text(color = "grey40",
+                                size = 9),
+    plot.caption.position = "plot",
+    axis.line.x = element_line(color = "black",
+                               size = .8),
+    axis.line.y = element_line(color = "black",
+                               size = .8),
+    axis.title.x = element_text(size = 11,
+                                face = "bold"),
+    axis.title.y = element_text(size = 11,
+                                face = "bold"),
+    axis.text = element_text(size = 9,
+                             color = "black",
+                             face = "bold"),
+    axis.ticks = element_blank(),
+    panel.grid.major.x = element_line(size = .6,
+                                      color = "#eaeaea",
+                                      linetype = "solid"),
+    panel.grid.major.y = element_line(size = .6,
+                                      color = "#eaeaea",
+                                      linetype = "solid"),
+    panel.grid.minor.x = element_line(size = .6,
+                                      color = "#eaeaea",
+                                      linetype = "solid"),
+    panel.grid.minor.y = element_blank(),
+    panel.spacing.x = unit(2, "lines"),
+    panel.spacing.y = unit(1, "lines")
+  )
+}
+
+## theme settings for flipped plots
+theme_flip <-
+  theme(panel.grid.minor.x = element_blank(),
+        panel.grid.minor.y = element_line(size = .6,
+                                          color = "#eaeaea"))
+
+## theme settings for maps
+theme_map <- 
+  theme_void(base_family = "Montserrat") +
+  theme(legend.direction = "horizontal",
+        legend.box = "horizontal",
+        legend.margin = margin(10, 10, 10, 10),
+        legend.title = element_text(size = 17, 
+                                    face = "bold"),
+        legend.text = element_text(color = "grey33",
+                                   size = 12),
+        plot.margin = margin(15, 5, 15, 5),
+        plot.title = element_text(face = "bold",
+                                  size = 20,
+                                  hjust = .5,
+                                  margin = margin(30, 0, 10, 0)),
+        plot.subtitle = element_text(face = "bold",
+                                     color = "grey33",
+                                     size = 17,
+                                     hjust = .5,
+                                     margin = margin(10, 0, -30, 0)),
+        plot.caption = element_text(size = 14,
+                                    color = "grey33",
+                                    hjust = .97,
+                                    margin = margin(-30, 0, 0, 0)))
+
+## numeric format for labels
+num_format <- scales::format_format(big.mark = ",", small.mark = ",", scientific = F)
+
+## main colors rankings.io
+r_col <- "#D21D5C"
+
+# to be updated if/when needed:
+# bl_col <- "#00d188"
+# bl_dark <- darken(bl_col, .3, space = "HLS")
+# 
+# ## colors + labels for interval stripes
+# int_cols <- c("#bce2d5", "#79d8b6", bl_col, "#009f66", "#006c45", "#003925")
+# int_perc <- c("100%", "95%", "75%", "50%", "25%", "5%")
+# 
+# ## colors for degrees (Bachelors, Massters, Doctorate in reverse order)
+# cols_degree <- c("#e64500", "#FFCC00", darken(bl_col, .1))
+# 
+# ## gradient colors for position
+# colfunc <- colorRampPalette(c(bl_col, "#bce2d5"))
+# pos_cols <- colfunc(10)
+```
+
+
+```{r} 
+
+# DATA LOADING
+
+samples <- rio::import(here::here("proc_data", "samples_50cities.rds")) %>%
+  mutate(
+    geodist_miles = round(geodist * 0.62137119224, 4), # the distance in American miles instead of km
+    drop = -drop, # we want the drop to be negative
+    # convert the city to factor and order by population:
+    City = fct_relevel(City, 
+                       levels = c(
+                         "New-York",
+                         "Los-Angeles",
+                         "Chicago",
+                         "Miami",
+                         "Dallas",
+                         "Philadelphia",
+                         "Houston",
+                         "Atlanta",
+                         "Washington",
+                         "Boston",
+                         "Phoenix",
+                         "Seattle",
+                         "San-Francisco",
+                         "Detroit",
+                         "San-Diego",
+                         "Minneapolis",
+                         "Tampa",
+                         "Denver",
+                         "Brooklyn",
+                         "Queens",
+                         "Riverside",
+                         "Baltimore",
+                         "Las-Vegas",
+                         "Portland",
+                         "San-Antonio",
+                         "St.-Louis",
+                         "Sacramento",
+                         "Orlando",
+                         "San-Jose",
+                         "Cleveland",
+                         "Pittsburgh",
+                         "Austin",
+                         "Cincinnati",
+                         "Kansas-City",
+                         "Indianapolis",
+                         "Columbus",
+                         "Charlotte",
+                         "Virginia-Beach",
+                         "Bronx",
+                         "Milwaukee",
+                         "Providence",
+                         "Jacksonville",
+                         "Salt-Lake-City",
+                         "Nashville",
+                         "Richmond",
+                         "Memphis",
+                         "Raleigh",
+                         "New-Orleans",
+                         "Louisville",
+                         "Oklahoma-City"
+                       )),
+    City = recode(City,
+                  "New-York" = "New York",
+                  "Los-Angeles" = "Los Angeles",
+                  "San-Francisco" = "San Francisco",
+                  "San-Diego" = "San Diego",
+                  "Las-Vegas" = "Las Vegas",
+                  "San-Antonio" = "San Antonio",
+                  "St.-Louis" = "St. Louis",
+                  "San-Jose" = "San Jose",
+                  "Kansas-City" = "Kansas City",
+                  "Virginia-Beach" = "Virginia Beach",
+                  "Salt-Lake-City"= "Salt Lake City",
+                  "New-Orleans" = "New Orleans",
+                  "Oklahoma-City" = "Oklahoma City"
+    )
+  )
+
+# # check how many samples in first mile:
+# ten_miles_samples = c("11", "12", "13", "14", "15","16", "17", "18","19", "20")
+# samples %>% filter(Sample %in% ten_miles_samples) %>% count(geodist_miles) %>% mutate(
+#   rough_geodist = cut(geodist_miles, breaks = seq(0, max(samples$geodist_miles)+1), labels = FALSE), # bin by mile
+#   rough_geodist = ifelse(is.na(rough_geodist), 0, rough_geodist) # the bin 0 is 0 instead of NA
+# ) %>%
+#   ungroup() %>%
+#   group_by(rough_geodist) %>%
+#   summarise(sum_n = sum(n)) %>%
+#   View()
+# 
+# samples  %>% filter(Sample %in% ten_miles_samples) %>% filter(geodist_miles < 1, geodist_miles != 0) %>% count(Sample)
+
+
+
+```
+
+
+```{r}
+
+# DATA PROCESSING
+#   we need an easy way to plot the distance to origin for the plots.
+#   so, we bin the distance by mile, and compute the average rank in a bin.
+# we then create several tibbles, one with an average by city
+# and another with an average by city and sample.
+
+# method: because the geo distance varies, and is not the EXACT same
+# btw cities and samples, we bin by mile to plot.
+
+# we start by adding "bin" (rounding) the geographical distance:
+samples <- samples %>% 
+  mutate(
+    rough_geodist = cut(geodist_miles, breaks = seq(0, max(samples$geodist_miles)+1), labels = FALSE), # bin by mile 
+    rough_geodist = ifelse(is.na(rough_geodist), 0, rough_geodist), # the bin 0 is 0 instead of NA
+    granular_geodist = cut(geodist_miles, breaks = seq(0, max(samples$geodist_miles)+1, 0.1), labels = FALSE)/10, # bin by 10th of a mile 
+    granular_geodist = ifelse(is.na(granular_geodist), 0, granular_geodist), # the bin 0 is 0 instead of NA
+    rank = ifelse(rank == 21, 25, rank) # we use 25 to code missing values, instead of 21 -> better visibility, better highlight of difference.
+  ) %>%
+  rowwise() %>%
+  mutate(
+    unique_sample = paste(as.character(City), Sample, collapse = "_") # a unique id
+  ) %>%
+  ungroup()
+
+
+# a tibble with an average by city
+avg_by_city <- samples %>%
+  group_by(City, rough_geodist) %>%
+  summarise(avg_drop = mean(drop),
+            n_samples = n(),
+            sd = sd(drop),
+            avg_rank = mean(rank),
+            n_samples_out_of_top20 = sum(rank > 20)
+  ) %>%
+  ungroup() %>%
+  mutate(
+    percentage_out_of_top20 = (n_samples_out_of_top20 / n_samples),
+    # avg_rank = ifelse(avg_rank > 20, 25, avg_rank), # we do not force 25 to +20 averages
+    seg_color = ifelse(avg_rank > 20, "orange", "black") # to color the +20 samples
+  )
+
+# a table to store the values of the last geodist -> used to put label at the end of lines
+data_ends <- avg_by_city %>%
+  group_by(City) %>%
+  mutate(last_geodist = max(rough_geodist)) %>%
+  ungroup() %>%
+  filter(rough_geodist == last_geodist)
+
+
+# a tibble with an average by city and sample
+avg_by_city_and_firm <- samples %>%
+  group_by(City, Sample, rough_geodist) %>%
+  summarise(avg_drop = mean(drop),
+            avg_rank = mean(rank),
+            n_samples = n(),
+            n_samples_out_of_top20 = sum(rank > 20)
+  ) %>%
+  ungroup() %>%
+  mutate(
+    percentage_out_of_top20 = (n_samples_out_of_top20 / n_samples),
+    # avg_rank = ifelse(avg_rank > 20, 25, avg_rank), # we do not force 25 to +20 averages
+    seg_color = ifelse(avg_rank > 20, "orange", "black") # to color the +20 samples
+  ) %>%
+  rowwise() %>%
+  mutate(
+    unique_sample = paste(as.character(City), Sample, collapse = "_") # a unique id
+  ) %>%
+  ungroup()
+
+
+# a tibble with an average by sample, regardless of city
+avg_by_firm <- samples %>%
+  group_by(unique_sample, rough_geodist) %>%
+  summarise(avg_drop = mean(drop),
+            n_samples = n(),
+            sd = sd(drop),
+            avg_rank = mean(rank),
+            n_samples_out_of_top20 = sum(rank > 20)
+  ) %>%
+  ungroup() %>%
+  mutate(
+    percentage_out_of_top20 = (n_samples_out_of_top20 / n_samples),
+    # avg_rank = ifelse(avg_rank > 20, 25, avg_rank), # we do not force 25 to +20 averages
+    seg_color = ifelse(avg_rank > 20, "orange", "black") # to color the +20 samples
+  )
+
+
+# a tibble with a granularity of tenth of a mile:
+# a tibble with an average by city and sample
+avg_by_city_and_firm_granular <- samples %>%
+  group_by(City, Sample, unique_sample, granular_geodist) %>%
+  summarise(avg_drop = mean(drop),
+            avg_rank = mean(rank),
+            n_samples = n(),
+            n_samples_out_of_top20 = sum(rank > 20)
+  ) %>%
+  ungroup() %>%
+  mutate(
+    percentage_out_of_top20 = (n_samples_out_of_top20 / n_samples),
+    # avg_rank = ifelse(avg_rank > 20, 25, avg_rank), # we do not force 25 to +20 averages
+    seg_color = ifelse(avg_rank > 20, "orange", "black") # to color the +20 samples
+  ) %>%
+  rowwise() %>%
+  mutate(
+    unique_sample = paste(as.character(City), Sample, collapse = "_") # a unique id
+  ) %>%
+  ungroup()
+
+```
+
+This is an annex to the [Google Maps Ranking - Proximity Study](https://frontpagedata.com/google-maps-proximity).  
+
+# 10-Mile Grids for All Cities
+
+We reproduced the Local Falcon grids with heat maps. Each tile is the rank of the law firm observed by Local Falcon on the 15x15 grid centered at the firm's location. The grids measure 10 miles by 10 miles. The data used to draw these grids can be found [here](https://docs.google.com/spreadsheets/d/1uOKfBcs_RgAxRf8fAlhmH8f5VLzPtf1t7enPWVT1mnM/edit?usp=sharing).   
+
+Legend:  
+
+```{r fig.align='center', fig.height=4.5, out.width='55%'}
+
+normalize_10miles <- function(x){
+  # min-max norm. btw 0 and 1
+  return(round((x - min(x)) / (max(x) - min(x)), 3))
+}
+
+normalize_5miles <- function(x){
+  # min-max norm. btw 0 and 0.5
+  return(round((x - min(x)) * 0.5 / (max(x) - min(x)), 3))
+}
+
+to_plot_heatmap <- samples %>% select(City, Sample, rank, Latitude, Longitude) %>%
+  filter(City == "Miami", Sample == "12") %>%
+  mutate(
+    rank_label = as.character(rank),
+    rank_label = ifelse(rank_label == 25, "20+", rank_label),
+    rank = ifelse(rank == 25, NA, rank),
+  ) %>%
+  group_by(Sample) %>%
+  mutate( # need to normalize location else cannot facet them (not same axis)
+    Long_norm = as.factor(normalize_10miles(Longitude)),
+    Lat_norm = as.factor(normalize_10miles(Latitude))
+  ) %>%
+  ungroup()
+
+ggplot(data = to_plot_heatmap,
+       aes(x = Long_norm, y = Lat_norm, fill = rank) ) +
+  geom_tile(show.legend = FALSE) +
+  geom_text(aes(label = rank_label)) +
+  scale_fill_gradient(low = "#005470", high = "#F3E5C9", na.value = "#ff8989", guide = FALSE) +
+  coord_equal() + # force square tiles
+  theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(),
+        panel.background = element_blank(),
+        axis.ticks = element_blank(), axis.ticks.x = element_blank(),
+        panel.border=element_blank()) +
+  theme_void()
+# theme(panel.grid.major.x = element_blank())
+
+
+```
+
+```{r}
+# a function to plot the heatmaps of all cities
+plot_heatmap_20 <- function(Data, City_of_Choice, ten_miles_samples){
+  Data %>% select(City, Sample, rank, Latitude, Longitude) %>%
+    filter(City == City_of_Choice) %>%
+    mutate(
+      rank_label = as.character(rank),
+      rank_label = ifelse(rank_label == 25, "20+", rank_label),
+      rank = ifelse(rank == 25, NA, rank),
+    ) %>%
+    group_by(Sample) %>%
+    mutate( # for now, we treat them the same, then just show the 10-mile radius samples
+      Long_norm = ifelse(Sample %in% ten_miles_samples, 
+                         as.factor(normalize_10miles(Longitude)),
+                         as.factor(normalize_10miles(Longitude))),
+      Lat_norm = ifelse(Sample %in% ten_miles_samples, 
+                        as.factor(normalize_10miles(Latitude)),
+                        as.factor(normalize_10miles(Latitude)))
+    ) %>%
+    ungroup() %>%
+    filter(Sample %in% ten_miles_samples) %>%
+    #plot:
+    ggplot(aes(x = Long_norm, y = Lat_norm, fill = rank, label = rank_label) ) +
+    facet_wrap(vars(Sample), ncol = 5)  +
+    geom_tile(show.legend = FALSE) +
+    scale_fill_gradient(low = "#005470", high = "#F3E5C9", na.value = "#ff8989", guide = FALSE) +
+    coord_equal() + # force square tiles
+    theme_void() +
+    theme(
+      panel.spacing.x = unit(0.01, "lines"), # less space around plots
+      panel.spacing.y = unit(0.1, "lines"),
+    )
+}
+
+# defining the size of the heatmaps:
+hheight = 4
+hwidth = '60%'
+
+```
+
+The visualizations below show the grids for the 20 samples with a 10-mile radius in each city.  
+
+### New York
+
+```{r fig.align='center', fig.height=hheight, out.width=hwidth}
+
+ten_miles_samples <- as.character(seq(11,30)) # says, for this city, which are the 10-mile samples
+plot_heatmap_20(samples, "New York", ten_miles_samples)
+
+```
+
+### Los Angeles
+
+```{r fig.align='center', fig.height=hheight, out.width=hwidth}
+
+ten_miles_samples <- as.character(seq(11,30)) # says, for this city, which are the 10-mile samples
+plot_heatmap_20(samples, "Los Angeles", ten_miles_samples)
+
+```
+
+### Chicago
+
+```{r fig.align='center', fig.height=hheight, out.width=hwidth}
+
+ten_miles_samples <- as.character(seq(11,30)) # says, for this city, which are the 10-mile samples
+plot_heatmap_20(samples, "Chicago", ten_miles_samples)
+
+```
+
+### Miami
+
+```{r fig.align='center', fig.height=hheight, out.width=hwidth}
+
+ten_miles_samples <- as.character(seq(11,30)) # says, for this city, which are the 10-mile samples
+plot_heatmap_20(samples, "Miami", ten_miles_samples)
+
+```
+
+### Dallas
+
+```{r fig.align='center', fig.height=hheight, out.width=hwidth}
+
+ten_miles_samples <- as.character(seq(11,30)) # says, for this city, which are the 10-mile samples
+plot_heatmap_20(samples, "Dallas", ten_miles_samples)
+
+```
+
+
+### Philadelphia
+
+```{r fig.align='center', fig.height=hheight, out.width=hwidth}
+
+ten_miles_samples <- as.character(seq(11,30)) # says, for this city, which are the 10-mile samples
+plot_heatmap_20(samples, "Philadelphia", ten_miles_samples)
+
+```
+
+### Houston
+
+```{r fig.align='center', fig.height=hheight, out.width=hwidth}
+
+ten_miles_samples <- as.character(seq(11,30)) # says, for this city, which are the 10-mile samples
+plot_heatmap_20(samples, "Houston", ten_miles_samples)
+
+```
+
+### Atlanta
+
+```{r fig.align='center', fig.height=hheight, out.width=hwidth}
+
+ten_miles_samples <- as.character(seq(11,30)) # says, for this city, which are the 10-mile samples
+plot_heatmap_20(samples, "Atlanta", ten_miles_samples)
+
+```
+
+### Washington
+
+```{r fig.align='center', fig.height=hheight, out.width=hwidth}
+
+ten_miles_samples <- as.character(seq(11,30)) # says, for this city, which are the 10-mile samples
+plot_heatmap_20(samples, "Washington", ten_miles_samples)
+
+```
+
+### Boston
+
+```{r fig.align='center', fig.height=hheight, out.width=hwidth}
+
+ten_miles_samples <- as.character(seq(11,30)) # says, for this city, which are the 10-mile samples
+plot_heatmap_20(samples, "Boston", ten_miles_samples)
+
+```
+
+### Phoenix
+```{r fig.align='center', fig.height=hheight, out.width=hwidth}
+
+ten_miles_samples <- as.character(seq(1,20)) # says, for this city, which are the 10-mile samples
+ten_miles_samples <- stringr::str_pad(ten_miles_samples, 2, side = "left", pad = "0")
+plot_heatmap_20(samples, "Phoenix", ten_miles_samples)
+
+```
+
+### Seattle
+```{r fig.align='center', fig.height=hheight, out.width=hwidth}
+
+ten_miles_samples <- as.character(seq(1,20)) # says, for this city, which are the 10-mile samples
+ten_miles_samples <- stringr::str_pad(ten_miles_samples, 2, side = "left", pad = "0")
+plot_heatmap_20(samples, "Seattle", ten_miles_samples)
+
+```
+
+### San Francisco
+```{r fig.align='center', fig.height=hheight, out.width=hwidth}
+
+ten_miles_samples <- as.character(seq(1,20)) # says, for this city, which are the 10-mile samples
+ten_miles_samples <- stringr::str_pad(ten_miles_samples, 2, side = "left", pad = "0")
+plot_heatmap_20(samples, "San Francisco", ten_miles_samples)
+
+```
+
+### Detroit
+```{r fig.align='center', fig.height=hheight, out.width=hwidth}
+
+ten_miles_samples <- as.character(seq(1,20)) # says, for this city, which are the 10-mile samples
+ten_miles_samples <- stringr::str_pad(ten_miles_samples, 2, side = "left", pad = "0")
+plot_heatmap_20(samples, "Detroit", ten_miles_samples)
+
+```
+
+### San Diego
+```{r fig.align='center', fig.height=hheight, out.width=hwidth}
+
+ten_miles_samples <- as.character(seq(1,20)) # says, for this city, which are the 10-mile samples
+ten_miles_samples <- stringr::str_pad(ten_miles_samples, 2, side = "left", pad = "0")
+plot_heatmap_20(samples, "San Diego", ten_miles_samples)
+
+```
+
+### Minneapolis
+```{r fig.align='center', fig.height=hheight, out.width=hwidth}
+
+ten_miles_samples <- as.character(seq(1,20)) # says, for this city, which are the 10-mile samples
+ten_miles_samples <- stringr::str_pad(ten_miles_samples, 2, side = "left", pad = "0")
+plot_heatmap_20(samples, "Minneapolis", ten_miles_samples)
+
+```
+
+### Tampa
+```{r fig.align='center', fig.height=hheight, out.width=hwidth}
+
+ten_miles_samples <- as.character(seq(1,20)) # says, for this city, which are the 10-mile samples
+ten_miles_samples <- stringr::str_pad(ten_miles_samples, 2, side = "left", pad = "0")
+plot_heatmap_20(samples, "Tampa", ten_miles_samples)
+
+```
+
+### Denver
+```{r fig.align='center', fig.height=hheight, out.width=hwidth}
+
+ten_miles_samples <- as.character(seq(1,20)) # says, for this city, which are the 10-mile samples
+ten_miles_samples <- stringr::str_pad(ten_miles_samples, 2, side = "left", pad = "0")
+plot_heatmap_20(samples, "Denver", ten_miles_samples)
+
+```
+
+### Brooklyn
+```{r fig.align='center', fig.height=hheight, out.width=hwidth}
+
+ten_miles_samples <- as.character(seq(1,20)) # says, for this city, which are the 10-mile samples
+ten_miles_samples <- stringr::str_pad(ten_miles_samples, 2, side = "left", pad = "0")
+plot_heatmap_20(samples, "Brooklyn", ten_miles_samples)
+
+```
+
+### Queens
+```{r fig.align='center', fig.height=hheight, out.width=hwidth}
+
+ten_miles_samples <- as.character(seq(1,20)) # says, for this city, which are the 10-mile samples
+ten_miles_samples <- stringr::str_pad(ten_miles_samples, 2, side = "left", pad = "0")
+plot_heatmap_20(samples, "Queens", ten_miles_samples)
+
+```
+
+### Riverside
+```{r fig.align='center', fig.height=hheight, out.width=hwidth}
+
+ten_miles_samples <- as.character(seq(1,20)) # says, for this city, which are the 10-mile samples
+ten_miles_samples <- stringr::str_pad(ten_miles_samples, 2, side = "left", pad = "0")
+plot_heatmap_20(samples, "Riverside", ten_miles_samples)
+
+```
+
+### Baltimore
+```{r fig.align='center', fig.height=hheight, out.width=hwidth}
+
+ten_miles_samples <- as.character(seq(1,20)) # says, for this city, which are the 10-mile samples
+ten_miles_samples <- stringr::str_pad(ten_miles_samples, 2, side = "left", pad = "0")
+plot_heatmap_20(samples, "Baltimore", ten_miles_samples)
+
+```
+
+### Las Vegas
+```{r fig.align='center', fig.height=hheight, out.width=hwidth}
+
+ten_miles_samples <- as.character(seq(1,20)) # says, for this city, which are the 10-mile samples
+ten_miles_samples <- stringr::str_pad(ten_miles_samples, 2, side = "left", pad = "0")
+plot_heatmap_20(samples, "Las Vegas", ten_miles_samples)
+
+```
+
+### Portland
+```{r fig.align='center', fig.height=hheight, out.width=hwidth}
+
+ten_miles_samples <- as.character(seq(1,20)) # says, for this city, which are the 10-mile samples
+ten_miles_samples <- stringr::str_pad(ten_miles_samples, 2, side = "left", pad = "0")
+plot_heatmap_20(samples, "Portland", ten_miles_samples)
+
+```
+
+### San Antonio
+```{r fig.align='center', fig.height=hheight, out.width=hwidth}
+
+ten_miles_samples <- as.character(seq(1,20)) # says, for this city, which are the 10-mile samples
+ten_miles_samples <- stringr::str_pad(ten_miles_samples, 2, side = "left", pad = "0")
+plot_heatmap_20(samples, "San Antonio", ten_miles_samples)
+
+```
+
+### St. Louis
+```{r fig.align='center', fig.height=hheight, out.width=hwidth}
+
+ten_miles_samples <- as.character(seq(1,20)) # says, for this city, which are the 10-mile samples
+ten_miles_samples <- stringr::str_pad(ten_miles_samples, 2, side = "left", pad = "0")
+plot_heatmap_20(samples, "St. Louis", ten_miles_samples)
+
+```
+
+### Sacramento
+```{r fig.align='center', fig.height=hheight, out.width=hwidth}
+
+ten_miles_samples <- as.character(seq(1,20)) # says, for this city, which are the 10-mile samples
+ten_miles_samples <- stringr::str_pad(ten_miles_samples, 2, side = "left", pad = "0")
+plot_heatmap_20(samples, "Sacramento", ten_miles_samples)
+
+```
+
+### Orlando
+```{r fig.align='center', fig.height=hheight, out.width=hwidth}
+
+ten_miles_samples <- as.character(seq(1,20)) # says, for this city, which are the 10-mile samples
+ten_miles_samples <- stringr::str_pad(ten_miles_samples, 2, side = "left", pad = "0")
+plot_heatmap_20(samples, "Orlando", ten_miles_samples)
+
+```
+
+### San Jose
+```{r fig.align='center', fig.height=hheight, out.width=hwidth}
+
+ten_miles_samples <- as.character(seq(1,20)) # says, for this city, which are the 10-mile samples
+ten_miles_samples <- stringr::str_pad(ten_miles_samples, 2, side = "left", pad = "0")
+plot_heatmap_20(samples, "San Jose", ten_miles_samples)
+
+```
+
+### Cleveland
+```{r fig.align='center', fig.height=hheight, out.width=hwidth}
+
+ten_miles_samples <- as.character(seq(1,20)) # says, for this city, which are the 10-mile samples
+ten_miles_samples <- stringr::str_pad(ten_miles_samples, 2, side = "left", pad = "0")
+plot_heatmap_20(samples, "Cleveland", ten_miles_samples)
+
+```
+
+### Pittsburgh
+```{r fig.align='center', fig.height=hheight, out.width=hwidth}
+
+ten_miles_samples <- as.character(seq(1,20)) # says, for this city, which are the 10-mile samples
+ten_miles_samples <- stringr::str_pad(ten_miles_samples, 2, side = "left", pad = "0")
+plot_heatmap_20(samples, "Pittsburgh", ten_miles_samples)
+
+```
+
+### Austin
+```{r fig.align='center', fig.height=hheight, out.width=hwidth}
+
+ten_miles_samples <- as.character(seq(1,20)) # says, for this city, which are the 10-mile samples
+ten_miles_samples <- stringr::str_pad(ten_miles_samples, 2, side = "left", pad = "0")
+plot_heatmap_20(samples, "Austin", ten_miles_samples)
+
+```
+
+### Cincinnati
+```{r fig.align='center', fig.height=hheight, out.width=hwidth}
+
+ten_miles_samples <- as.character(seq(1,20)) # says, for this city, which are the 10-mile samples
+ten_miles_samples <- stringr::str_pad(ten_miles_samples, 2, side = "left", pad = "0")
+plot_heatmap_20(samples, "Cincinnati", ten_miles_samples)
+
+```
+
+### Kansas City
+```{r fig.align='center', fig.height=hheight, out.width=hwidth}
+
+ten_miles_samples <- as.character(seq(1,20)) # says, for this city, which are the 10-mile samples
+ten_miles_samples <- stringr::str_pad(ten_miles_samples, 2, side = "left", pad = "0")
+plot_heatmap_20(samples, "Kansas City", ten_miles_samples)
+
+```
+
+### Indianapolis
+```{r fig.align='center', fig.height=hheight, out.width=hwidth}
+
+ten_miles_samples <- as.character(seq(1,20)) # says, for this city, which are the 10-mile samples
+ten_miles_samples <- stringr::str_pad(ten_miles_samples, 2, side = "left", pad = "0")
+plot_heatmap_20(samples, "Indianapolis", ten_miles_samples)
+
+```
+
+### Columbus
+```{r fig.align='center', fig.height=hheight, out.width=hwidth}
+
+ten_miles_samples <- as.character(seq(1,20)) # says, for this city, which are the 10-mile samples
+ten_miles_samples <- stringr::str_pad(ten_miles_samples, 2, side = "left", pad = "0")
+plot_heatmap_20(samples, "Columbus", ten_miles_samples)
+
+```
+
+### Charlotte
+```{r fig.align='center', fig.height=hheight, out.width=hwidth}
+
+ten_miles_samples <- as.character(seq(1,20)) # says, for this city, which are the 10-mile samples
+ten_miles_samples <- stringr::str_pad(ten_miles_samples, 2, side = "left", pad = "0")
+plot_heatmap_20(samples, "Charlotte", ten_miles_samples)
+
+```
+
+### Virginia Beach
+```{r fig.align='center', fig.height=hheight, out.width=hwidth}
+
+ten_miles_samples <- as.character(seq(1,20)) # says, for this city, which are the 10-mile samples
+ten_miles_samples <- stringr::str_pad(ten_miles_samples, 2, side = "left", pad = "0")
+plot_heatmap_20(samples, "Virginia Beach", ten_miles_samples)
+
+```
+
+### Bronx
+```{r fig.align='center', fig.height=hheight, out.width=hwidth}
+
+ten_miles_samples <- as.character(seq(1,20)) # says, for this city, which are the 10-mile samples
+ten_miles_samples <- stringr::str_pad(ten_miles_samples, 2, side = "left", pad = "0")
+plot_heatmap_20(samples, "Bronx", ten_miles_samples)
+
+```
+
+### Milwaukee
+```{r fig.align='center', fig.height=hheight, out.width=hwidth}
+
+ten_miles_samples <- as.character(seq(1,20)) # says, for this city, which are the 10-mile samples
+ten_miles_samples <- stringr::str_pad(ten_miles_samples, 2, side = "left", pad = "0")
+plot_heatmap_20(samples, "Milwaukee", ten_miles_samples)
+
+```
+
+### Providence
+```{r fig.align='center', fig.height=hheight, out.width=hwidth}
+
+ten_miles_samples <- as.character(seq(1,20)) # says, for this city, which are the 10-mile samples
+ten_miles_samples <- stringr::str_pad(ten_miles_samples, 2, side = "left", pad = "0")
+plot_heatmap_20(samples, "Providence", ten_miles_samples)
+
+```
+
+### Jacksonville
+```{r fig.align='center', fig.height=hheight, out.width=hwidth}
+
+ten_miles_samples <- as.character(seq(1,20)) # says, for this city, which are the 10-mile samples
+ten_miles_samples <- stringr::str_pad(ten_miles_samples, 2, side = "left", pad = "0")
+plot_heatmap_20(samples, "Jacksonville", ten_miles_samples)
+
+```
+
+### Salt Lake City
+```{r fig.align='center', fig.height=hheight, out.width=hwidth}
+
+ten_miles_samples <- as.character(seq(1,20)) # says, for this city, which are the 10-mile samples
+ten_miles_samples <- stringr::str_pad(ten_miles_samples, 2, side = "left", pad = "0")
+plot_heatmap_20(samples, "Salt Lake City", ten_miles_samples)
+
+```
+
+### Nashville
+```{r fig.align='center', fig.height=hheight, out.width=hwidth}
+
+ten_miles_samples <- as.character(seq(1,20)) # says, for this city, which are the 10-mile samples
+ten_miles_samples <- stringr::str_pad(ten_miles_samples, 2, side = "left", pad = "0")
+plot_heatmap_20(samples, "Nashville", ten_miles_samples)
+
+```
+
+### Richmond
+```{r fig.align='center', fig.height=hheight, out.width=hwidth}
+
+ten_miles_samples <- as.character(seq(1,20)) # says, for this city, which are the 10-mile samples
+ten_miles_samples <- stringr::str_pad(ten_miles_samples, 2, side = "left", pad = "0")
+plot_heatmap_20(samples, "Richmond", ten_miles_samples)
+
+```
+
+### Memphis
+```{r fig.align='center', fig.height=hheight, out.width=hwidth}
+
+ten_miles_samples <- as.character(seq(1,20)) # says, for this city, which are the 10-mile samples
+ten_miles_samples <- stringr::str_pad(ten_miles_samples, 2, side = "left", pad = "0")
+plot_heatmap_20(samples, "Memphis", ten_miles_samples)
+
+```
+
+### Raleigh
+```{r fig.align='center', fig.height=hheight, out.width=hwidth}
+
+ten_miles_samples <- as.character(seq(1,20)) # says, for this city, which are the 10-mile samples
+ten_miles_samples <- stringr::str_pad(ten_miles_samples, 2, side = "left", pad = "0")
+plot_heatmap_20(samples, "Raleigh", ten_miles_samples)
+
+```
+
+### New Orleans
+```{r fig.align='center', fig.height=hheight, out.width=hwidth}
+
+ten_miles_samples <- as.character(seq(1,20)) # says, for this city, which are the 10-mile samples
+ten_miles_samples <- stringr::str_pad(ten_miles_samples, 2, side = "left", pad = "0")
+plot_heatmap_20(samples, "Portland", ten_miles_samples)
+
+```
+
+### Louisville
+```{r fig.align='center', fig.height=hheight, out.width=hwidth}
+
+ten_miles_samples <- as.character(seq(1,20)) # says, for this city, which are the 10-mile samples
+ten_miles_samples <- stringr::str_pad(ten_miles_samples, 2, side = "left", pad = "0")
+plot_heatmap_20(samples, "Louisville", ten_miles_samples)
+
+```
+
+### Oklahoma City
+```{r fig.align='center', fig.height=hheight, out.width=hwidth}
+
+ten_miles_samples <- as.character(seq(1,20)) # says, for this city, which are the 10-mile samples
+ten_miles_samples <- stringr::str_pad(ten_miles_samples, 2, side = "left", pad = "0")
+plot_heatmap_20(samples, "Oklahoma City", ten_miles_samples)
+
+```
+
+
+
+
