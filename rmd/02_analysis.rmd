@@ -553,7 +553,7 @@ avg_by_city_and_firm %>%
   scale_y_continuous(labels = scales::percent, breaks = c(0, 0.1, 0.2, 0.3, 0.4, 0.5)) +
   scale_x_continuous(breaks = c(1,5,10,15,20,25)) +
   labs(
-    title = "56% of law firms ranked first at their own location"
+    title = "Local SERP Position of Law Firms at Their Own Location"
   ) +
   xlab("Rank at own location") +
   ylab("Percentage of law firms") +
